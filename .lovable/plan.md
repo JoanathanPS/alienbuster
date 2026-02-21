@@ -1,133 +1,175 @@
 
 
-# Alien Buster -- Major Feature Upgrade
+# Add Authentication and Protected Routes to Alien Buster
 
 ## Summary
 
-Add a Hotspots Map page with clustered report markers, a Satellite Vegetation Check placeholder on the success screen, an Admin Review page for verifying/rejecting reports, and colored status badges on My Reports.
+Add Supabase email magic link authentication and Google OAuth (via Lovable Cloud managed auth), protect key routes, update the reports table to use real auth user IDs, and add a proper admin role system for the Expert Review page.
 
 ---
 
 ## Changes
 
-### 1. Hotspots Map Page
+### 1. Google OAuth Setup
 
-New page at `/hotspots` with a full-screen interactive Leaflet map.
+Use the Lovable Cloud managed Google OAuth tool to generate the `src/integrations/lovable/` module. Then use `lovable.auth.signInWithOAuth("google", ...)` for the Google sign-in button.
 
-- Fetch all reports from the `reports` table
-- Plot circle markers: orange for "pending", green for "verified", red for "rejected"
-- Use Leaflet's built-in marker clustering (via the `leaflet.markercluster` library)
-- On marker click, show a popup with: photo thumbnail, date, notes, status, and coordinates
-- Show a loading spinner while reports are being fetched
-- Map centers on the user's location (if available) or a world view
+### 2. Auth Context Hook
 
-### 2. Bottom Navigation Update
+Create `src/hooks/useAuth.ts`:
+- Listen to `supabase.auth.onAuthStateChange` (set up BEFORE `getSession`)
+- Expose: `user`, `session`, `loading`, `signOut`
+- Wrap the app in an `AuthProvider` context
 
-Add "Hotspots" tab between "My Reports" and "How it works":
-- Icon: `MapPin` from lucide-react
-- Path: `/hotspots`
-- Move theme toggle to a smaller icon button in the corner to keep nav clean with 4 tabs
+### 3. Login Page
 
-### 3. Satellite Vegetation Check (Success Screen)
+Create `src/pages/Login.tsx`:
+- Email input + "Send Magic Link" button (calls `supabase.auth.signInWithOtp({ email })`)
+- Google sign-in button (calls `lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin })`)
+- Toast feedback on success/error
+- Redirect to home after login
 
-On the Submit success screen, add a card below the map:
-- Show spinner "Analyzing land-cover changes..." for 3 seconds
-- Then show a randomly picked result: either "Unusual vegetation change detected (NDVI drop)" with a red/orange warning, or "Normal vegetation pattern" with a green check
-- Include a small placeholder colored gradient bar to simulate NDVI visualization
-- Comment: `// TODO: Replace placeholder with real Google Earth Engine NDVI change detection via backend API`
+### 4. Protected Routes
 
-### 4. Admin Review Page
+Create `src/components/ProtectedRoute.tsx`:
+- If loading: show spinner
+- If no session: redirect to `/login`
+- Otherwise: render children
 
-New page at `/admin-review` (not in bottom nav, accessed via URL):
-- Fetch all reports with `status = 'pending'`
-- List each report as a card with: photo, date, user, location, notes
-- Two action buttons per card: "Verify" (green) and "Reject" (red)
-- On click, update the report's `status` in the database and show a toast
-- Comment: `// TODO: Later add real auth so only experts can access review page`
+Wrap these routes: `/submit`, `/my-reports`, `/hotspots`, `/admin-review`
 
-**Database change needed**: Add an RLS policy allowing anyone to UPDATE the `status` column on the `reports` table. (Currently only INSERT and SELECT policies exist.)
+Public routes (no login required): `/`, `/how-it-works`, `/login`
 
-### 5. Status Badges on My Reports
+### 5. Header with User Info
 
-Replace the plain text status with colored badges:
-- "pending" -- orange/amber background
-- "verified" -- green background
-- "rejected" -- red/destructive background
+Create `src/components/AppHeader.tsx`:
+- Show user email (truncated) when logged in
+- Logout button
+- Show "Sign in" link when not logged in
 
-### 6. Router Update
+### 6. Admin Role System
 
-Add routes for `/hotspots` and `/admin-review` in `App.tsx`.
+Database changes:
+- Create `app_role` enum: `('admin', 'user')`
+- Create `user_roles` table with `user_id` (FK to `auth.users`) and `role`
+- Enable RLS on `user_roles`
+- Create `has_role()` security definer function
+- Seed an admin role for a specific user (or let the user add one manually)
+
+In `AdminReview.tsx`:
+- Check if current user has 'admin' role via a query to `user_roles`
+- Show "Access Denied" if not admin
+- Hide "Expert Review" from bottom nav for non-admins
+
+### 7. Update Reports Table
+
+The `user_id` column is currently `text` (stores a nickname). With auth, new reports will store `auth.uid()` (a UUID as text). Existing nickname-based reports remain as-is.
+
+Update the Submit page:
+- Remove the "Nickname" input field
+- Use `(await supabase.auth.getUser()).data.user.id` as user_id
+- Store user email in a new `user_email` column (for display purposes)
+
+Database migration:
+- Add `user_email text` column to reports
+- Update RLS: users can read their own reports where `user_id = auth.uid()::text`
+
+### 8. Update My Reports
+
+- Remove nickname search input
+- Automatically fetch reports for the logged-in user using their auth user ID
 
 ---
 
 ## Technical Details
 
-### Database Migration
+### Database Migrations
 
 ```sql
--- Allow public updates to reports (status only for now)
-CREATE POLICY "Anyone can update report status"
-ON public.reports
-FOR UPDATE
-USING (true)
+-- 1. Add user_email column to reports
+ALTER TABLE public.reports ADD COLUMN IF NOT EXISTS user_email text;
+
+-- 2. Create role enum and user_roles table
+CREATE TYPE public.app_role AS ENUM ('admin', 'user');
+
+CREATE TABLE public.user_roles (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  role app_role NOT NULL,
+  UNIQUE (user_id, role)
+);
+
+ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
+
+-- Users can read their own roles
+CREATE POLICY "Users can read own roles"
+ON public.user_roles FOR SELECT
+TO authenticated
+USING (user_id = auth.uid());
+
+-- 3. Security definer function for role checks
+CREATE OR REPLACE FUNCTION public.has_role(_user_id uuid, _role app_role)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.user_roles
+    WHERE user_id = _user_id AND role = _role
+  )
+$$;
+
+-- 4. Update reports RLS policies for authenticated users
+DROP POLICY IF EXISTS "Users can read own reports" ON public.reports;
+CREATE POLICY "Users can read own reports"
+ON public.reports FOR SELECT
+USING (true);
+
+-- Keep insert open but now we expect auth users
+DROP POLICY IF EXISTS "Anyone can insert reports" ON public.reports;
+CREATE POLICY "Authenticated users can insert reports"
+ON public.reports FOR INSERT
+TO authenticated
 WITH CHECK (true);
 ```
-
-This is intentionally permissive since there is no auth system yet. The TODO comment on the admin page notes that real auth should be added later.
-
-### New Dependencies
-
-- `leaflet.markercluster` -- for marker clustering on the Hotspots map. Will need to import its CSS as well.
 
 ### Files Created
 
 | File | Purpose |
 |---|---|
-| `src/pages/Hotspots.tsx` | Full-screen map with clustered report markers |
-| `src/pages/AdminReview.tsx` | Pending reports list with verify/reject actions |
+| `src/hooks/useAuth.ts` | Auth context provider + hook |
+| `src/pages/Login.tsx` | Login page with magic link + Google OAuth |
+| `src/components/ProtectedRoute.tsx` | Route guard redirecting to login |
+| `src/components/AppHeader.tsx` | Header showing user email + logout |
 
 ### Files Modified
 
 | File | Change |
 |---|---|
-| `src/App.tsx` | Add routes for `/hotspots` and `/admin-review` |
-| `src/components/BottomNav.tsx` | Add Hotspots tab with MapPin icon |
-| `src/pages/Submit.tsx` | Add satellite vegetation check card on success screen |
-| `src/pages/MyReports.tsx` | Add colored status badges (pending/verified/rejected) |
+| `src/App.tsx` | Wrap in AuthProvider, add Login route, protect routes |
+| `src/pages/Submit.tsx` | Use auth user ID instead of nickname input |
+| `src/pages/MyReports.tsx` | Auto-fetch reports for logged-in user, remove search |
+| `src/pages/AdminReview.tsx` | Check admin role, show access denied if not admin |
+| `src/components/BottomNav.tsx` | Conditionally show Expert Review tab for admins |
 
-### Hotspots Map Component Structure
-
-```text
-Hotspots.tsx:
-  - Fetch all reports via supabase.from("reports").select("*")
-  - Initialize Leaflet map with OSM tiles
-  - Create MarkerClusterGroup
-  - For each report with lat/lng:
-    - Create circleMarker with color based on status
-    - Bind popup with HTML: photo img, date, notes, status badge
-  - Add cluster group to map
-  - Show Loader2 spinner during fetch
-```
-
-### Satellite Card Structure
+### Auth Flow
 
 ```text
-On success screen (Submit.tsx):
-  State: satelliteLoading (true), satelliteResult (null)
-  
-  useEffect on success:
-    - setTimeout 3s
-    - Pick random: "anomaly" or "normal"
-    - Set result
-  
-  UI:
-    - Card with Satellite icon
-    - If loading: spinner + "Analyzing land-cover changes..."
-    - If anomaly: orange warning with NDVI drop message
-    - If normal: green check with normal pattern message
-    - Colored gradient bar (CSS gradient: red -> yellow -> green)
+User opens app
+  -> Public pages (Home, How It Works) work without login
+  -> Clicking "Report" or navigating to protected routes
+     -> If not logged in: redirect to /login
+     -> Login page: enter email for magic link OR click Google
+     -> After auth: redirect back to intended page
+  -> Header shows email + logout button
 ```
 
-### No changes to existing components
+### Admin Setup
 
-PhotoInput, CameraView, LocationInput, ReportMap, and HowItWorks remain unchanged.
+After deploying, to make a user an admin:
+- Sign up / log in with the desired account
+- Insert a row into `user_roles`: `INSERT INTO user_roles (user_id, role) VALUES ('<user-uuid>', 'admin')`
+- This can be done via the Cloud dashboard's SQL runner
+
