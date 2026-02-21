@@ -6,6 +6,8 @@ import { BottomNav } from "@/components/BottomNav";
 import Index from "./pages/Index";
 import Submit from "./pages/Submit";
 import MyReports from "./pages/MyReports";
+import Hotspots from "./pages/Hotspots";
+import AdminReview from "./pages/AdminReview";
 import HowItWorks from "./pages/HowItWorks";
 import NotFound from "./pages/NotFound";
 
@@ -20,6 +22,8 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/submit" element={<Submit />} />
           <Route path="/my-reports" element={<MyReports />} />
+          <Route path="/hotspots" element={<Hotspots />} />
+          <Route path="/admin-review" element={<AdminReview />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
