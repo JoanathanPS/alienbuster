@@ -2,12 +2,12 @@ import { useEffect, useState } from "react";
 import { FileText, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 
 interface Report {
   id: number;
   created_at: string;
   user_id: string;
+  user_email: string | null;
   latitude: number | null;
   longitude: number | null;
   photo_url: string | null;
@@ -16,29 +16,26 @@ interface Report {
 }
 
 const MyReports = () => {
-  const { user } = useAuth();
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
     const fetchReports = async () => {
       setLoading(true);
       const { data, error } = await supabase
         .from("reports")
         .select("*")
-        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
       if (!error && data) setReports(data);
       setLoading(false);
     };
     fetchReports();
-  }, [user]);
+  }, []);
 
   return (
     <div className="mx-auto max-w-lg px-4 pb-24 pt-6">
-      <h2 className="mb-4 text-xl font-bold text-foreground">My Reports</h2>
+      <h2 className="mb-4 text-xl font-bold text-foreground">All Reports</h2>
 
       {loading && (
         <div className="flex justify-center py-12">
@@ -63,6 +60,7 @@ const MyReports = () => {
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between">
                 <p className="text-xs text-muted-foreground">
+                  {r.user_email ? r.user_email + " · " : ""}
                   {new Date(r.created_at).toLocaleDateString()}
                 </p>
                 <span className={cn(
