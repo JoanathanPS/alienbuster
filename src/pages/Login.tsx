@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { Bug, Loader2, Lock, Mail } from "lucide-react";
+import { Bug, Loader2, Mail } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,81 +12,81 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import {
-  Form,
-  FormControl,
-  FormDescription as ShadFormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
-const authSchema = z.object({
+const schema = z.object({
   email: z.string().email("Enter a valid email"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
-type AuthValues = z.infer<typeof authSchema>;
+type Values = z.infer<typeof schema>;
 
-type Mode = "signin" | "signup";
-
-const Login = () => {
+export default function Login() {
   const navigate = useNavigate();
   const { session } = useAuth();
-  const [mode, setMode] = useState<Mode>("signin");
   const [loading, setLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
+
+  const redirectTo = useMemo(() => {
+    try {
+      return sessionStorage.getItem("post-login-redirect") || "/";
+    } catch {
+      return "/";
+    }
+  }, []);
 
   useEffect(() => {
-    if (session) navigate("/", { replace: true });
-  }, [session, navigate]);
+    if (!session) return;
 
-  const form = useForm<AuthValues>({
-    resolver: zodResolver(authSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
+    try {
+      sessionStorage.removeItem("post-login-redirect");
+    } catch {
+      // ignore
+    }
+
+    navigate(redirectTo, { replace: true });
+  }, [session, navigate, redirectTo]);
+
+  const form = useForm<Values>({
+    resolver: zodResolver(schema),
+    defaultValues: { email: "" },
   });
 
-  const onSubmit = async (values: AuthValues) => {
+  const sendMagicLink = async (values: Values) => {
     setLoading(true);
     try {
-      if (mode === "signin") {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: values.email,
-          password: values.password,
-        });
-        if (error) throw error;
-        toast.success("Signed in");
-        navigate("/", { replace: true });
-        return;
-      }
-
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signInWithOtp({
         email: values.email,
-        password: values.password,
         options: {
           emailRedirectTo: window.location.origin,
         },
       });
 
       if (error) throw error;
-
-      // Depending on Supabase email confirmation settings, you might get a session immediately.
-      if (data.session) {
-        toast.success("Account created and signed in");
-        navigate("/", { replace: true });
-      } else {
-        toast.message("Account created — check your email to confirm, then sign in.");
-      }
+      toast.success("Magic link sent — check your email");
     } catch (e: any) {
-      toast.error(e?.message || "Authentication failed");
+      toast.error(e?.message || "Failed to send magic link");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const signInWithGoogle = async () => {
+    setOauthLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+
+      if (error) throw error;
+      // Redirect handled by Supabase
+    } catch (e: any) {
+      toast.error(e?.message || "Google sign-in failed");
+      setOauthLoading(false);
     }
   };
 
@@ -101,7 +101,7 @@ const Login = () => {
               </span>
               <div>
                 <CardTitle className="text-xl">Alien Buster</CardTitle>
-                <CardDescription>Citizen + satellite early warning</CardDescription>
+                <CardDescription>Sign in to submit reports and view hotspots.</CardDescription>
               </div>
             </div>
             <Badge variant="secondary">Auth</Badge>
@@ -109,132 +109,72 @@ const Login = () => {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Sign in</TabsTrigger>
-              <TabsTrigger value="signup">Sign up</TabsTrigger>
-            </TabsList>
+          <Form {...form}>
+            <form className="space-y-4" onSubmit={form.handleSubmit(sendMagicLink)}>
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                        <Input className="pl-9" type="email" placeholder="you@example.com" autoComplete="email" {...field} />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <TabsContent value="signin" className="mt-4">
-              <div className="mb-3 text-sm text-muted-foreground">Sign in to submit reports and track verification.</div>
-              <Separator className="mb-4" />
+              <Button
+                type="submit"
+                className="w-full min-h-[48px] bg-accent text-accent-foreground hover:bg-accent/90"
+                disabled={loading || oauthLoading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                    Sending magic link...
+                  </>
+                ) : (
+                  "Send magic link"
+                )}
+              </Button>
+            </form>
+          </Form>
 
-              <Form {...form}>
-                <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                            <Input className="pl-9" type="email" placeholder="you@example.com" autoComplete="email" {...field} />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+          <div className="relative">
+            <Separator />
+            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
+              or
+            </span>
+          </div>
 
-                  <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Password</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                            <Input className="pl-9" type="password" autoComplete="current-password" {...field} />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                        Signing in...
-                      </>
-                    ) : (
-                      "Sign in"
-                    )}
-                  </Button>
-                </form>
-              </Form>
-            </TabsContent>
-
-            <TabsContent value="signup" className="mt-4">
-              <div className="mb-3 text-sm text-muted-foreground">Create an account for verified reporting.</div>
-              <Separator className="mb-4" />
-
-              <Form {...form}>
-                <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                            <Input className="pl-9" type="email" placeholder="you@example.com" autoComplete="email" {...field} />
-                          </div>
-                        </FormControl>
-                        <ShadFormDescription>Use a real email if your Supabase project requires confirmation.</ShadFormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Password</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                            <Input className="pl-9" type="password" autoComplete="new-password" {...field} />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                        Creating...
-                      </>
-                    ) : (
-                      "Create account"
-                    )}
-                  </Button>
-                </form>
-              </Form>
-            </TabsContent>
-          </Tabs>
+          <Button
+            type="button"
+            variant="secondary"
+            className="w-full min-h-[48px]"
+            onClick={signInWithGoogle}
+            disabled={loading || oauthLoading}
+          >
+            {oauthLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                Connecting Google...
+              </>
+            ) : (
+              "Continue with Google"
+            )}
+          </Button>
 
           <div className="rounded-md border border-border bg-muted/20 p-3 text-xs text-muted-foreground">
-            <div className="font-medium text-foreground">Heads up</div>
-            <div className="mt-1">
-              Email/password auth must be enabled in Supabase: Authentication → Providers → Email.
-            </div>
+            <div className="font-medium text-foreground">Supabase setup</div>
+            <div className="mt-1">Enable Email (magic link) + Google in Supabase Authentication → Providers.</div>
           </div>
         </CardContent>
       </Card>
     </div>
   );
-};
-
-export default Login;
+}

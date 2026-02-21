@@ -37,10 +37,7 @@ const Index = () => {
         </div>
       }
       description={
-        <span>
-          An early warning system that fuses citizen geo-tagged photos with satellite change detection to spot invasive outbreaks
-          before they spread.
-        </span>
+          <span>Report invasive species to protect ecosystems.</span>
       }
     >
       <Card className="overflow-hidden border-border/60 bg-gradient-to-br from-primary/10 via-background to-accent/10">
@@ -50,7 +47,7 @@ const Index = () => {
             Detect 6–12 months earlier than traditional surveys
           </div>
           <CardTitle className="text-2xl md:text-3xl">
-            Spot it. Snap it. Pin it. <span className="text-primary">Stop the spread.</span>
+            Alien Buster: <span className="text-primary">Stop the spread.</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -61,7 +58,7 @@ const Index = () => {
               onClick={() => setShowPhotoInput(true)}
             >
               <Camera className="h-5 w-5" aria-hidden="true" />
-              Report a sighting
+              Report Suspicious Species
             </Button>
             <Button size="lg" variant="secondary" className="h-14 rounded-xl" onClick={() => navigate("/how-it-works")}>
               See how it works

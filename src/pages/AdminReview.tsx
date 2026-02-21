@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { CheckCircle, XCircle, Loader2, ShieldX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveReportPhotoUrl } from "@/lib/reportPhotos";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
@@ -17,8 +18,13 @@ interface Report {
 }
 
 const AdminReview = () => {
-  const { isAdmin, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+
+  // IMPORTANT: Hard gate expert access to the allowlisted email only.
+  const isExpert = user?.email === "expert@example.com";
+
   const [reports, setReports] = useState<Report[]>([]);
+  const [photoUrlById, setPhotoUrlById] = useState<Record<number, string | null>>({});
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<number | null>(null);
 
@@ -30,14 +36,20 @@ const AdminReview = () => {
       .eq("status", "pending")
       .order("created_at", { ascending: false });
 
-    if (!error && data) setReports(data);
+    if (!error && data) {
+      setReports(data);
+      const entries = await Promise.all(
+        (data as Report[]).map(async (r) => [r.id, await resolveReportPhotoUrl(r.photo_url)] as const)
+      );
+      setPhotoUrlById(Object.fromEntries(entries));
+    }
     setLoading(false);
   };
 
   useEffect(() => {
-    if (isAdmin) fetchPending();
+    if (isExpert) fetchPending();
     else setLoading(false);
-  }, [isAdmin]);
+  }, [isExpert]);
 
   const updateStatus = async (id: number, status: "verified" | "rejected") => {
     setUpdating(id);
@@ -63,13 +75,17 @@ const AdminReview = () => {
     );
   }
 
-  if (!isAdmin) {
+  if (!isExpert) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center px-4">
         <ShieldX className="mb-4 h-16 w-16 text-destructive" />
         <h2 className="mb-2 text-2xl font-bold text-foreground">Access Denied</h2>
         <p className="text-center text-muted-foreground">
-          Only admin users can access the Expert Review page.
+          Only expert users can access the Expert Review page.
+        </p>
+        <p className="mt-2 text-center text-xs text-muted-foreground">
+          {/* TODO: Use Supabase auth roles for real expert access */}
+          Temporary hack: allowlist expert@example.com.
         </p>
       </div>
     );
@@ -98,8 +114,8 @@ const AdminReview = () => {
       <div className="space-y-4">
         {reports.map((r) => (
           <div key={r.id} className="overflow-hidden rounded-xl border border-border bg-card">
-            {r.photo_url && (
-              <img src={r.photo_url} alt="Report" className="h-40 w-full object-cover" />
+            {photoUrlById[r.id] && (
+              <img src={photoUrlById[r.id] ?? undefined} alt="Report" className="h-40 w-full object-cover" />
             )}
             <div className="p-4">
               <div className="mb-2 flex items-center justify-between">
@@ -112,7 +128,7 @@ const AdminReview = () => {
               </div>
               {r.latitude != null && r.longitude != null && (
                 <p className="text-xs text-muted-foreground">
-                  📍 {r.latitude.toFixed(4)}, {r.longitude.toFixed(4)}
+                  Location: {r.latitude.toFixed(4)}, {r.longitude.toFixed(4)}
                 </p>
               )}
               {r.notes && (
@@ -120,7 +136,7 @@ const AdminReview = () => {
               )}
               <div className="mt-4 flex gap-3">
                 <Button
-                  className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
+                  className="min-h-[48px] flex-1 bg-accent text-accent-foreground hover:bg-accent/90"
                   onClick={() => updateStatus(r.id, "verified")}
                   disabled={updating === r.id}
                 >
@@ -132,7 +148,7 @@ const AdminReview = () => {
                 </Button>
                 <Button
                   variant="destructive"
-                  className="flex-1"
+                  className="min-h-[48px] flex-1"
                   onClick={() => updateStatus(r.id, "rejected")}
                   disabled={updating === r.id}
                 >

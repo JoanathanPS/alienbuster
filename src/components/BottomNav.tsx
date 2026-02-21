@@ -7,18 +7,21 @@ import { NavLink } from "@/components/NavLink";
 
 const baseNavItems = [
   { path: "/", label: "Home", icon: Home },
-  { path: "/my-reports", label: "Reports", icon: FileText },
+  { path: "/my-reports", label: "My Reports", icon: FileText },
   { path: "/hotspots", label: "Hotspots", icon: MapPin },
-  { path: "/how-it-works", label: "Info", icon: Info },
+  { path: "/how-it-works", label: "How it works", icon: Info },
 ];
 
 export function BottomNav({ className }: { className?: string }) {
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
-  const { isAdmin } = useAuth();
+  const { user } = useAuth();
 
-  const navItems = isAdmin
-    ? [...baseNavItems, { path: "/admin-review", label: "Review", icon: Shield }]
+  // IMPORTANT: Hard gate expert UI to the allowlisted email only.
+  const isExpert = user?.email === "expert@example.com";
+
+  const navItems = isExpert
+    ? [...baseNavItems, { path: "/expert-review", label: "Review", icon: Shield }]
     : baseNavItems;
 
   return (

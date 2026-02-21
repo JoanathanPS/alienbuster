@@ -40,3 +40,7 @@ ver5.py
 *.njsproj
 *.sln
 *.sw?
+
+# Warp local state
+.prompt/
+.qodo/

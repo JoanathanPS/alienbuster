@@ -20,18 +20,21 @@ import {
 
 const baseNavItems = [
   { path: "/", label: "Home", icon: Home },
-  { path: "/my-reports", label: "Reports", icon: FileText },
+  { path: "/my-reports", label: "My Reports", icon: FileText },
   { path: "/hotspots", label: "Hotspots", icon: MapPin },
   { path: "/how-it-works", label: "How it works", icon: Info },
 ] as const;
 
 export function AppSidebar() {
   const location = useLocation();
-  const { isAdmin } = useAuth();
+  const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
-  const navItems = isAdmin
-    ? [...baseNavItems, { path: "/admin-review", label: "Expert review", icon: Shield }]
+  // IMPORTANT: Hard gate expert UI to the allowlisted email only.
+  const isExpert = user?.email === "expert@example.com";
+
+  const navItems = isExpert
+    ? [...baseNavItems, { path: "/expert-review", label: "Expert review", icon: Shield }]
     : baseNavItems;
 
   return (

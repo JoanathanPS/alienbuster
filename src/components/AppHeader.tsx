@@ -30,9 +30,8 @@ export function AppHeader() {
           {session ? (
             <>
               <Button
-                variant="secondary"
                 size="sm"
-                className="hidden gap-2 sm:inline-flex"
+                className="hidden min-h-[48px] gap-2 bg-accent text-accent-foreground hover:bg-accent/90 sm:inline-flex"
                 onClick={() => navigate("/submit")}
               >
                 <Plus className="h-4 w-4" aria-hidden="true" />

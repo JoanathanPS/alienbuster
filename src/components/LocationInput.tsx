@@ -25,7 +25,7 @@ export function LocationInput({ latitude, longitude, onLocationChange }: Locatio
       onLocationChange(geo.latitude, geo.longitude);
       if (!toastShown.current) {
         toastShown.current = true;
-        toast.success("Location fetched!");
+        toast.success("Location acquired!");
       }
     }
   }, [geo.latitude, geo.longitude]);

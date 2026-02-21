@@ -16,8 +16,8 @@
     --secondary-foreground: 222 47% 11%;
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;
-    /* Sci-fi accent (electric purple) */
-    --accent: 274 95% 55%;
+    /* CTA accent (orange) */
+    --accent: 24 95% 53%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -49,8 +49,8 @@
     --secondary-foreground: 210 40% 96%;
     --muted: 217 33% 14%;
     --muted-foreground: 215 20% 65%;
-    /* Sci-fi accent (electric purple) */
-    --accent: 274 95% 60%;
+    /* CTA accent (orange) */
+    --accent: 24 95% 56%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;

@@ -8,6 +8,7 @@ from typing import Optional
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 
@@ -94,6 +95,64 @@ async def ndvi(
         "anomaly": result.anomaly,
         "satellite_score": result.satellite_score,
         "status": result.status,
+    }
+
+
+class SatelliteAnalyzeRequest(BaseModel):
+    lat: float
+    lon: float
+    species: Optional[str] = None
+    is_invasive: Optional[bool] = None  # optional hint from frontend
+
+
+@app.post("/api/satellite-analyze")
+async def satellite_analyze(payload: SatelliteAnalyzeRequest):
+    """Wrapper around NDVI that also returns simple correlation messaging."""
+
+    # TODO: Integrate richer Google Earth Engine layers and return a real NDVI overlay tile URL.
+
+    ee_project = os.getenv("EARTH_ENGINE_PROJECT") or "alien-buster"
+    result = get_ndvi_change(
+        payload.lat,
+        payload.lon,
+        project=ee_project,
+        end_date=os.getenv("EARTH_ENGINE_END_DATE"),
+    )
+
+    # Correlation logic
+    if result.anomaly is None:
+        correlation = "unknown"
+    else:
+        # Only call "high" correlation if we have BOTH an anomaly AND the report is invasive.
+        correlation = "high" if (result.anomaly and payload.is_invasive) else "low"
+
+    mean = result.mean_ndvi
+    change = result.change_from_baseline
+    anomaly = result.anomaly
+
+    message_lines = []
+    if isinstance(mean, (int, float)) and isinstance(change, (int, float)):
+        message_lines.append(f"NDVI Mean: {mean:.2f} (Change: {change:+.2f})")
+    else:
+        message_lines.append("NDVI Mean: —")
+
+    if anomaly is True:
+        message_lines.append("Anomaly: Yes")
+    elif anomaly is False:
+        message_lines.append("Anomaly: No")
+    else:
+        message_lines.append("Anomaly: Unknown")
+
+    if payload.species and correlation == "high":
+        message_lines.append(f"High correlation: Possible {payload.species} outbreak detected")
+
+    return {
+        "ndvi_mean": result.mean_ndvi,
+        "change": result.change_from_baseline,
+        "anomaly": result.anomaly,
+        "status": result.status,
+        "correlation": correlation,
+        "message": "\n".join(message_lines),
     }
 
 
