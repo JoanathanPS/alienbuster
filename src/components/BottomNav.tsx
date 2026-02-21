@@ -1,9 +1,10 @@
-import { Home, FileText, MapPin, Info, Moon, Sun } from "lucide-react";
+import { Home, FileText, MapPin, Info, Moon, Sun, Shield } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/hooks/useTheme";
+import { useAuth } from "@/hooks/useAuth";
 
-const navItems = [
+const baseNavItems = [
   { path: "/", label: "Home", icon: Home },
   { path: "/my-reports", label: "Reports", icon: FileText },
   { path: "/hotspots", label: "Hotspots", icon: MapPin },
@@ -14,6 +15,11 @@ export function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
+  const { isAdmin } = useAuth();
+
+  const navItems = isAdmin
+    ? [...baseNavItems, { path: "/admin-review", label: "Review", icon: Shield }]
+    : baseNavItems;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 backdrop-blur-md">

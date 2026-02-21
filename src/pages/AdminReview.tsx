@@ -1,8 +1,8 @@
-// TODO: Later add real auth so only experts can access review page
 import { useEffect, useState } from "react";
-import { CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, ShieldX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 interface Report {
@@ -17,6 +17,7 @@ interface Report {
 }
 
 const AdminReview = () => {
+  const { isAdmin, loading: authLoading } = useAuth();
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<number | null>(null);
@@ -34,8 +35,9 @@ const AdminReview = () => {
   };
 
   useEffect(() => {
-    fetchPending();
-  }, []);
+    if (isAdmin) fetchPending();
+    else setLoading(false);
+  }, [isAdmin]);
 
   const updateStatus = async (id: number, status: "verified" | "rejected") => {
     setUpdating(id);
@@ -52,6 +54,26 @@ const AdminReview = () => {
     }
     setUpdating(null);
   };
+
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center px-4">
+        <ShieldX className="mb-4 h-16 w-16 text-destructive" />
+        <h2 className="mb-2 text-2xl font-bold text-foreground">Access Denied</h2>
+        <p className="text-center text-muted-foreground">
+          Only admin users can access the Expert Review page.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-lg px-4 pb-24 pt-6">
@@ -85,7 +107,7 @@ const AdminReview = () => {
                   {r.created_at ? new Date(r.created_at).toLocaleDateString() : ""}
                 </span>
                 <span className="text-xs font-medium text-muted-foreground">
-                  by {r.user_id}
+                  by {r.user_id.slice(0, 8)}…
                 </span>
               </div>
               {r.latitude != null && r.longitude != null && (
