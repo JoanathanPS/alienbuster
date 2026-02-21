@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { FileText, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Report {
   id: number;
@@ -16,45 +16,29 @@ interface Report {
 }
 
 const MyReports = () => {
-  const [nickname, setNickname] = useState(() => localStorage.getItem("alien-buster-nickname") || "");
+  const { user } = useAuth();
   const [reports, setReports] = useState<Report[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const fetchReports = async (userId: string) => {
-    if (!userId.trim()) return;
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("reports")
-      .select("*")
-      .eq("user_id", userId.trim())
-      .order("created_at", { ascending: false });
-
-    if (!error && data) setReports(data);
-    setLoading(false);
-  };
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (nickname) fetchReports(nickname);
-  }, []);
+    if (!user) return;
+    const fetchReports = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("reports")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (!error && data) setReports(data);
+      setLoading(false);
+    };
+    fetchReports();
+  }, [user]);
 
   return (
     <div className="mx-auto max-w-lg px-4 pb-24 pt-6">
       <h2 className="mb-4 text-xl font-bold text-foreground">My Reports</h2>
-
-      <div className="mb-4 flex gap-2">
-        <Input
-          placeholder="Enter your nickname to search"
-          value={nickname}
-          onChange={(e) => setNickname(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && fetchReports(nickname)}
-        />
-        <button
-          onClick={() => fetchReports(nickname)}
-          className="shrink-0 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          Search
-        </button>
-      </div>
 
       {loading && (
         <div className="flex justify-center py-12">

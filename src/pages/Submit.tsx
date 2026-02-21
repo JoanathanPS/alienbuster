@@ -3,12 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { Send, Loader2, CheckCircle, ArrowLeft, AlertTriangle, Bug } from "lucide-react";
 import { SatelliteCard } from "@/components/SatelliteCard";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { LocationInput } from "@/components/LocationInput";
 import { ReportMap } from "@/components/ReportMap";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 type SubmitState = "form" | "submitting" | "success";
@@ -22,10 +22,10 @@ const FAKE_SPECIES = ["Kudzu Vine", "Burmese Python", "Lionfish", "Asian Carp", 
 
 const Submit = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
-  const [nickname, setNickname] = useState(() => localStorage.getItem("alien-buster-nickname") || "");
   const [notes, setNotes] = useState("");
   const [submitState, setSubmitState] = useState<SubmitState>("form");
   const [submittedReport, setSubmittedReport] = useState<SubmittedReport | null>(null);
@@ -57,8 +57,8 @@ const Submit = () => {
   }, [navigate]);
 
   const handleSubmit = async () => {
-    if (!nickname.trim()) {
-      toast.error("Please enter your nickname or ID");
+    if (!user) {
+      toast.error("You must be signed in to submit a report");
       return;
     }
     if (!photoPreview) {
@@ -67,17 +67,14 @@ const Submit = () => {
     }
 
     setSubmitState("submitting");
-    localStorage.setItem("alien-buster-nickname", nickname);
 
     try {
-      // Convert base64 to blob for upload
       const base64 = sessionStorage.getItem("report-photo-base64") || photoPreview;
       const res = await fetch(base64);
       const blob = await res.blob();
 
       const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
 
-      // Upload photo to storage
       const { error: uploadError } = await supabase.storage
         .from("reports-photos")
         .upload(fileName, blob, { contentType: "image/jpeg" });
@@ -88,17 +85,17 @@ const Submit = () => {
         .from("reports-photos")
         .getPublicUrl(fileName);
 
-      // TODO: After photo upload, call backend API /api/identify (Python BioCLIP) for species detection, then save species/confidence to DB
+      // TODO: After photo upload, call backend API /api/identify (Python BioCLIP) for species detection
 
-      // Save report to database
       const { error: insertError } = await supabase.from("reports").insert({
-        user_id: nickname.trim(),
+        user_id: user.id,
         latitude,
         longitude,
         photo_url: urlData.publicUrl,
         notes: notes.trim() || null,
         status: "pending",
-      });
+        user_email: user.email || null,
+      } as any);
 
       if (insertError) throw insertError;
 
@@ -150,14 +147,12 @@ const Submit = () => {
 
       <h2 className="mb-6 text-xl font-bold text-foreground">Complete Your Report</h2>
 
-      {/* Photo preview */}
       {photoPreview && (
         <div className="mb-4 overflow-hidden rounded-xl border border-border">
           <img src={photoPreview} alt="Captured species" className="h-48 w-full object-cover" />
         </div>
       )}
 
-      {/* Species detection result */}
       {detectionLoading && (
         <div className="mb-6 flex items-center gap-2 rounded-xl border border-border bg-card p-4">
           <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -183,26 +178,12 @@ const Submit = () => {
       )}
 
       <div className="space-y-5">
-        {/* Location */}
         <LocationInput
           latitude={latitude}
           longitude={longitude}
           onLocationChange={(lat, lng) => { setLatitude(lat); setLongitude(lng); }}
         />
 
-        {/* Nickname */}
-        <div className="space-y-2">
-          <Label htmlFor="nickname">Your Nickname or ID *</Label>
-          <Input
-            id="nickname"
-            placeholder="e.g. NatureWatcher42"
-            value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
-            maxLength={50}
-          />
-        </div>
-
-        {/* Notes */}
         <div className="space-y-2">
           <Label htmlFor="notes">Notes / Description (optional)</Label>
           <Textarea
@@ -216,7 +197,6 @@ const Submit = () => {
           <p className="text-right text-xs text-muted-foreground">{notes.length}/500</p>
         </div>
 
-        {/* Submit */}
         <Button
           className="h-14 w-full gap-2 rounded-xl bg-accent text-lg font-semibold text-accent-foreground shadow-lg shadow-accent/25 hover:bg-accent/90"
           onClick={handleSubmit}
