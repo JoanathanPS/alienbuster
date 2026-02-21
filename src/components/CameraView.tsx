@@ -36,7 +36,7 @@ export function CameraView({ onPhotoTaken, onClose }: CameraViewProps) {
         <div className="flex gap-3 p-4">
           <Button variant="secondary" className="flex-1" onClick={retakePhoto}>Retake</Button>
           <Button className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90" onClick={() => onPhotoTaken(photo, photoBlob)}>
-            Use this photo
+            Continue
           </Button>
         </div>
       </div>
