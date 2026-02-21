@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { FileText, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -80,8 +81,13 @@ const MyReports = () => {
                 <p className="text-xs text-muted-foreground">
                   {new Date(r.created_at).toLocaleDateString()}
                 </p>
-                <span className="rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
-                  {r.status}
+                <span className={cn(
+                  "rounded-full px-2 py-0.5 text-xs font-semibold",
+                  r.status === "verified" && "bg-primary/15 text-primary",
+                  r.status === "rejected" && "bg-destructive/15 text-destructive",
+                  (!r.status || r.status === "pending") && "bg-accent/15 text-accent",
+                )}>
+                  {r.status || "pending"}
                 </span>
               </div>
               {r.latitude && r.longitude && (

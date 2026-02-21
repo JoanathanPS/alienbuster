@@ -1,12 +1,13 @@
-import { Home, FileText, Info, Moon, Sun } from "lucide-react";
+import { Home, FileText, MapPin, Info, Moon, Sun } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/hooks/useTheme";
 
 const navItems = [
   { path: "/", label: "Home", icon: Home },
-  { path: "/my-reports", label: "My Reports", icon: FileText },
-  { path: "/how-it-works", label: "How it works", icon: Info },
+  { path: "/my-reports", label: "Reports", icon: FileText },
+  { path: "/hotspots", label: "Hotspots", icon: MapPin },
+  { path: "/how-it-works", label: "Info", icon: Info },
 ];
 
 export function BottomNav() {

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Send, Loader2, CheckCircle, ArrowLeft, AlertTriangle, Bug } from "lucide-react";
+import { SatelliteCard } from "@/components/SatelliteCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -128,7 +129,8 @@ const Submit = () => {
             className="mb-6 h-48 w-full max-w-sm overflow-hidden rounded-xl"
           />
         )}
-        <div className="flex w-full max-w-sm gap-3">
+        <SatelliteCard />
+        <div className="mt-6 flex w-full max-w-sm gap-3">
           <Button variant="outline" className="flex-1" onClick={() => navigate("/")}>
             Submit another
           </Button>
