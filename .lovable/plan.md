@@ -1,95 +1,79 @@
 
 
-# Alien Buster -- Upgrade Plan
+# Alien Buster -- Feature Upgrade Plan
 
 ## Summary
 
-Enhance the existing app with a dual photo input flow (camera + gallery upload), replace emoji placeholders with real species images, and ensure dark mode is the default.
-
-The database, storage bucket, PWA manifest, service worker, bottom nav, My Reports page, Submit page, and map component are already built and working. No backend changes needed.
+Add a fake species detection UI to the Submit page, improve the "How It Works" species cards with aspect-square images, and polish touch targets and toast feedback across the app. The PhotoInput and CameraView components already work correctly and need only minor tweaks.
 
 ---
 
 ## Changes
 
-### 1. New Component: PhotoInput
+### 1. Fake Species Detection on Submit Page
 
-Create `src/components/PhotoInput.tsx` -- a full-screen overlay with two input methods.
+Add a simulated BioCLIP analysis that runs after the photo loads on the Submit page.
 
-- **"choose" mode**: Two buttons in a responsive grid (side-by-side on wider screens, stacked on small):
-  - "Take Photo" (orange, Camera icon) -- switches to camera mode
-  - "Upload from Gallery" (secondary, Upload icon) -- triggers hidden `<input type="file" accept="image/*">`
-  - Close button (X) in top-right corner
-- **"camera" mode**: Renders existing `CameraView`; on photo taken, switches to preview mode
-- **"preview" mode**: Full-screen image preview with:
-  - "Choose Another" (secondary) -- resets to choose mode
-  - "Continue" (orange) -- stores photo in sessionStorage and calls `onPhotoReady`
+- When the photo preview appears, show an "Analyzing with BioCLIP..." spinner for 2-3 seconds
+- After the delay, display a detection result card:
+  - Randomly pick from a list of species names (e.g., "Kudzu Vine", "Burmese Python", "Lionfish", "Asian Carp", "Unknown")
+  - Generate a random confidence between 70-95%
+  - If species is not "Unknown", show an orange warning banner: "Potential invasive species -- report submitted for review"
+- Add state variables: `detectionLoading`, `detectedSpecies`, `detectedConfidence`
+- Add comment: `// TODO: Replace fake detection with real call to /api/identify (Python BioCLIP backend) after photo upload`
 
-### 2. Update Home Page (Index.tsx)
+### 2. How It Works -- Aspect-Square Species Images
 
-- Replace direct `CameraView` usage with new `PhotoInput` overlay
-- Change state from `showCamera` to `showPhotoInput`
-- Keep hero section and info cards unchanged
+Update the species image cards from `aspect-video` to `aspect-square` for a more card-like presentation, matching the user's request.
 
-### 3. Update "How It Works" Page (HowItWorks.tsx)
+### 3. PhotoInput -- Add capture attribute
 
-Replace emoji-based species cards with image cards using free Unsplash photos:
-- **Kudzu Vine**: Dense vine covering trees (Unsplash URL)
-- **Burmese Python**: Large snake in grass (Unsplash URL)
-- **Lionfish**: Colorful spiky fish underwater (Unsplash URL)
+Add `capture="environment"` to the file input element so mobile devices default to the rear camera when using "Upload from Gallery".
 
-Each card shows a rounded image (aspect-video), species name, and description caption below.
+### 4. General Touch Target Polish
 
-### 4. Default to Dark Theme (useTheme.ts)
-
-Change the fallback when no stored preference and no system preference from `"light"` to `"dark"`.
-
-### 5. Update Submit Page TODO Comment
-
-Ensure the ML integration placeholder reads:
-```
-// TODO: After photo upload, call backend API /api/identify (Python BioCLIP) for species detection, then save species/confidence to DB
-```
+- Increase bottom action buttons in PhotoInput preview to `min-h-[48px]`
+- Increase the Submit button already has `h-14` (56px) which is good
+- Add `min-h-[48px]` to LocationInput retry button
+- Add sonner toast when location is successfully fetched: `toast.success("Location fetched!")`
 
 ---
 
 ## Technical Details
 
-### PhotoInput Component Structure
+### Submit.tsx Changes
+
+New state and fake detection logic:
 
 ```text
-Props:
-  onPhotoReady: (dataUrl: string, blob: Blob) => void
-  onClose: () => void
+State additions:
+  detectionLoading: boolean (default true)
+  detectedSpecies: string | null
+  detectedConfidence: number | null
 
-State:
-  mode: "choose" | "camera" | "preview"
-  photoDataUrl: string | null
-  photoBlob: Blob | null
+On photo load (useEffect):
+  - Set detectionLoading = true
+  - setTimeout 2-3s random delay
+  - Pick random species from list
+  - Pick random confidence 70-95
+  - Set results, detectionLoading = false
 
-Flow:
-  "choose" ->
-    Take Photo -> "camera" (renders CameraView)
-    Upload -> file input onChange -> read as dataUrl -> "preview"
-  "camera" ->
-    CameraView.onPhotoTaken -> store dataUrl+blob -> "preview"
-    CameraView.onClose -> back to "choose"
-  "preview" ->
-    "Choose Another" -> reset photo, back to "choose"
-    "Continue" -> call onPhotoReady(dataUrl, blob)
+UI additions (below photo preview):
+  - If detectionLoading: spinner + "Analyzing with BioCLIP..."
+  - If result ready: card showing species name + confidence %
+  - If species != "Unknown": orange warning banner
 ```
 
 ### Files Modified
 
 | File | Change |
 |---|---|
-| `src/components/PhotoInput.tsx` | New file -- dual photo input overlay |
-| `src/pages/Index.tsx` | Use PhotoInput instead of CameraView |
-| `src/pages/HowItWorks.tsx` | Replace emojis with real Unsplash images |
-| `src/hooks/useTheme.ts` | Default to "dark" |
-| `src/pages/Submit.tsx` | Update TODO comment for ML integration |
+| `src/pages/Submit.tsx` | Add fake detection UI with loading state, result card, and warning banner |
+| `src/pages/HowItWorks.tsx` | Change `aspect-video` to `aspect-square` on species images |
+| `src/components/PhotoInput.tsx` | Add `capture="environment"` to file input, ensure min-h-[48px] on buttons |
+| `src/components/LocationInput.tsx` | Add toast on successful location fetch, increase retry button touch target |
 
 ### No Database or Storage Changes
 
-The existing `reports` table and `reports-photos` bucket are already correctly configured. No migrations needed.
+No backend modifications needed. The fake detection is purely client-side UI.
 
