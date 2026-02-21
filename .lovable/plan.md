@@ -4,92 +4,92 @@
 
 ## Summary
 
-Enhance the existing Alien Buster app with a dual photo input flow (camera + gallery upload), real species images on the "How it works" page, and UI polish across all screens.
+Enhance the existing app with a dual photo input flow (camera + gallery upload), replace emoji placeholders with real species images, and ensure dark mode is the default.
+
+The database, storage bucket, PWA manifest, service worker, bottom nav, My Reports page, Submit page, and map component are already built and working. No backend changes needed.
 
 ---
 
 ## Changes
 
-### 1. New PhotoInput Component
+### 1. New Component: PhotoInput
 
-Create `src/components/PhotoInput.tsx` -- a full-screen overlay that replaces the current direct-to-camera flow on the Home page.
+Create `src/components/PhotoInput.tsx` -- a full-screen overlay with two input methods.
 
-- Two side-by-side buttons (stacked on small screens):
-  - "Take Photo" (orange, camera icon) -- opens CameraView
-  - "Upload from Gallery" (secondary, upload icon) -- triggers a hidden `<input type="file" accept="image/*">`
-- After a photo is obtained (from either method), show full-screen preview with:
-  - "Retake / Choose Another" (secondary button)
-  - "Continue" (primary orange button) -- stores photo in sessionStorage and navigates to `/submit`
+- **"choose" mode**: Two buttons in a responsive grid (side-by-side on wider screens, stacked on small):
+  - "Take Photo" (orange, Camera icon) -- switches to camera mode
+  - "Upload from Gallery" (secondary, Upload icon) -- triggers hidden `<input type="file" accept="image/*">`
+  - Close button (X) in top-right corner
+- **"camera" mode**: Renders existing `CameraView`; on photo taken, switches to preview mode
+- **"preview" mode**: Full-screen image preview with:
+  - "Choose Another" (secondary) -- resets to choose mode
+  - "Continue" (orange) -- stores photo in sessionStorage and calls `onPhotoReady`
 
-### 2. Update CameraView
+### 2. Update Home Page (Index.tsx)
 
-Modify `src/components/CameraView.tsx`:
-- Change "Use this photo" button label to "Continue" for consistency
-- Keep existing camera logic (it works well)
+- Replace direct `CameraView` usage with new `PhotoInput` overlay
+- Change state from `showCamera` to `showPhotoInput`
+- Keep hero section and info cards unchanged
 
-### 3. Update Home Page (Index.tsx)
+### 3. Update "How It Works" Page (HowItWorks.tsx)
 
-- Replace `setShowCamera(true)` with `setShowPhotoInput(true)` to open the new PhotoInput overlay instead of going directly to camera
-- Keep hero section and info cards as-is
+Replace emoji-based species cards with image cards using free Unsplash photos:
+- **Kudzu Vine**: Dense vine covering trees (Unsplash URL)
+- **Burmese Python**: Large snake in grass (Unsplash URL)
+- **Lionfish**: Colorful spiky fish underwater (Unsplash URL)
 
-### 4. Update "How It Works" Page
+Each card shows a rounded image (aspect-video), species name, and description caption below.
 
-Replace emoji placeholders with real images from Unsplash/Wikimedia for the three invasive species:
-- Kudzu Vine -- use a high-quality URL of kudzu covering trees
-- Burmese Python -- use a photo of a Burmese python
-- Lionfish -- use a photo of a lionfish
+### 4. Default to Dark Theme (useTheme.ts)
 
-Each species card will show an image with rounded corners, the species name, and a caption below.
+Change the fallback when no stored preference and no system preference from `"light"` to `"dark"`.
 
-### 5. Update Submit Page
+### 5. Update Submit Page TODO Comment
 
-- Add the TODO comment for ML integration: `// TODO: After photo upload, call backend API /api/identify (Python BioCLIP) for species detection, then save species/confidence to DB`
-- This comment already partially exists; will make it match the exact requested wording.
-
-### 6. Minor UI Polish
-
-- Ensure dark mode is the default by updating `useTheme.ts` to default to `"dark"` when no system preference or localStorage value is found
-- No structural changes to BottomNav, MyReports, or ReportMap -- they already work well
+Ensure the ML integration placeholder reads:
+```
+// TODO: After photo upload, call backend API /api/identify (Python BioCLIP) for species detection, then save species/confidence to DB
+```
 
 ---
 
 ## Technical Details
 
-### New file: `src/components/PhotoInput.tsx`
+### PhotoInput Component Structure
 
 ```text
-Props: { onPhotoReady: (dataUrl: string, blob: Blob) => void; onClose: () => void }
+Props:
+  onPhotoReady: (dataUrl: string, blob: Blob) => void
+  onClose: () => void
 
 State:
-- mode: "choose" | "camera" | "preview"
-- photoDataUrl / photoBlob
+  mode: "choose" | "camera" | "preview"
+  photoDataUrl: string | null
+  photoBlob: Blob | null
 
-"choose" mode:
-  - Two buttons side-by-side (grid-cols-2 on md+, grid-cols-1 on small)
-  - "Take Photo" sets mode to "camera"
-  - "Upload from Gallery" triggers file input, reads file as dataUrl, sets mode to "preview"
-
-"camera" mode:
-  - Renders existing CameraView
-  - onPhotoTaken callback sets photo and switches to "preview"
-
-"preview" mode:
-  - Full-screen image preview
-  - "Choose Another" resets to "choose"
-  - "Continue" calls onPhotoReady(dataUrl, blob)
+Flow:
+  "choose" ->
+    Take Photo -> "camera" (renders CameraView)
+    Upload -> file input onChange -> read as dataUrl -> "preview"
+  "camera" ->
+    CameraView.onPhotoTaken -> store dataUrl+blob -> "preview"
+    CameraView.onClose -> back to "choose"
+  "preview" ->
+    "Choose Another" -> reset photo, back to "choose"
+    "Continue" -> call onPhotoReady(dataUrl, blob)
 ```
 
-### Modified files
+### Files Modified
 
 | File | Change |
 |---|---|
-| `src/pages/Index.tsx` | Replace CameraView usage with PhotoInput |
-| `src/components/CameraView.tsx` | Minor label tweak |
-| `src/pages/HowItWorks.tsx` | Replace emoji cards with image cards using Unsplash URLs |
-| `src/pages/Submit.tsx` | Update TODO comment wording |
-| `src/hooks/useTheme.ts` | Default to dark theme |
+| `src/components/PhotoInput.tsx` | New file -- dual photo input overlay |
+| `src/pages/Index.tsx` | Use PhotoInput instead of CameraView |
+| `src/pages/HowItWorks.tsx` | Replace emojis with real Unsplash images |
+| `src/hooks/useTheme.ts` | Default to "dark" |
+| `src/pages/Submit.tsx` | Update TODO comment for ML integration |
 
-### No database or storage changes needed
+### No Database or Storage Changes
 
-The existing `reports` table and `reports-photos` bucket are already correctly configured.
+The existing `reports` table and `reports-photos` bucket are already correctly configured. No migrations needed.
 
