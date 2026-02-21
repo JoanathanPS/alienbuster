@@ -65,12 +65,14 @@ export function PhotoInput({ onPhotoReady, onClose }: PhotoInputProps) {
   if (mode === "preview" && photoDataUrl) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col bg-background">
+      <div className="flex-1 flex items-center justify-center overflow-hidden p-4">
         <img
           src={photoDataUrl}
           alt="Preview"
-          className="flex-1 object-contain"
+          className="max-h-full max-w-full object-contain rounded-xl"
         />
-        <div className="flex gap-3 p-4">
+      </div>
+      <div className="flex gap-3 p-4 pb-6">
           <Button variant="secondary" className="min-h-[48px] flex-1" onClick={resetPhoto}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Choose Another
