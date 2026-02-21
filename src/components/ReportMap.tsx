@@ -1,5 +1,4 @@
-import { useEffect } from "react";
-import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
+import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -11,14 +10,6 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
 
-function RecenterMap({ lat, lng }: { lat: number; lng: number }) {
-  const map = useMap();
-  useEffect(() => {
-    map.setView([lat, lng], 13);
-  }, [lat, lng, map]);
-  return null;
-}
-
 interface ReportMapProps {
   latitude: number;
   longitude: number;
@@ -26,22 +17,28 @@ interface ReportMapProps {
 }
 
 export function ReportMap({ latitude, longitude, className }: ReportMapProps) {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+
+  useEffect(() => {
+    if (!mapRef.current || mapInstanceRef.current) return;
+
+    const map = L.map(mapRef.current).setView([latitude, longitude], 13);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    }).addTo(map);
+    L.marker([latitude, longitude]).addTo(map);
+    mapInstanceRef.current = map;
+
+    return () => {
+      map.remove();
+      mapInstanceRef.current = null;
+    };
+  }, [latitude, longitude]);
+
   return (
     <div className={className}>
-      <MapContainer
-        center={[latitude, longitude]}
-        zoom={13}
-        scrollWheelZoom={false}
-        className="h-full w-full rounded-lg"
-        style={{ minHeight: "200px" }}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <Marker position={[latitude, longitude]} />
-        <RecenterMap lat={latitude} lng={longitude} />
-      </MapContainer>
+      <div ref={mapRef} className="h-full w-full rounded-lg" style={{ minHeight: "200px" }} />
     </div>
   );
 }
