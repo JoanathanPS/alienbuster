@@ -1,79 +1,62 @@
 
 
-# Alien Buster -- Feature Upgrade Plan
+# Fix: Photo Preview Buttons Hidden + Detection UI Not Visible
 
-## Summary
+## Problem
 
-Add a fake species detection UI to the Submit page, improve the "How It Works" species cards with aspect-square images, and polish touch targets and toast feedback across the app. The PhotoInput and CameraView components already work correctly and need only minor tweaks.
+After uploading an image in the PhotoInput component, the preview screen uses `flex-1` on the image element. This causes the image to expand and fill the entire screen, pushing the "Choose Another" and "Continue" buttons off the bottom of the viewport. The user only sees the image and doesn't know how to proceed.
 
----
+## Fix
 
-## Changes
+### 1. PhotoInput Preview Layout (PhotoInput.tsx)
 
-### 1. Fake Species Detection on Submit Page
+Fix the preview mode so buttons are always visible:
 
-Add a simulated BioCLIP analysis that runs after the photo loads on the Submit page.
+- Remove `flex-1` from the image
+- Wrap the image in a container that takes available space but doesn't push buttons away
+- Use `overflow-hidden` on the image container and `object-contain` on the image
+- Keep the buttons pinned at the bottom with proper padding
 
-- When the photo preview appears, show an "Analyzing with BioCLIP..." spinner for 2-3 seconds
-- After the delay, display a detection result card:
-  - Randomly pick from a list of species names (e.g., "Kudzu Vine", "Burmese Python", "Lionfish", "Asian Carp", "Unknown")
-  - Generate a random confidence between 70-95%
-  - If species is not "Unknown", show an orange warning banner: "Potential invasive species -- report submitted for review"
-- Add state variables: `detectionLoading`, `detectedSpecies`, `detectedConfidence`
-- Add comment: `// TODO: Replace fake detection with real call to /api/identify (Python BioCLIP backend) after photo upload`
+The layout should be:
+- Image area: fills available space above buttons, image centered within it
+- Button bar: always visible at the bottom, never pushed off-screen
 
-### 2. How It Works -- Aspect-Square Species Images
+### 2. Submit Page Scroll Visibility (Submit.tsx)
 
-Update the species image cards from `aspect-video` to `aspect-square` for a more card-like presentation, matching the user's request.
-
-### 3. PhotoInput -- Add capture attribute
-
-Add `capture="environment"` to the file input element so mobile devices default to the rear camera when using "Upload from Gallery".
-
-### 4. General Touch Target Polish
-
-- Increase bottom action buttons in PhotoInput preview to `min-h-[48px]`
-- Increase the Submit button already has `h-14` (56px) which is good
-- Add `min-h-[48px]` to LocationInput retry button
-- Add sonner toast when location is successfully fetched: `toast.success("Location fetched!")`
+No code changes needed here -- the detection UI code is already implemented and working. The issue is entirely in the PhotoInput preview blocking the user from reaching the Submit page.
 
 ---
 
 ## Technical Details
 
-### Submit.tsx Changes
+### File: `src/components/PhotoInput.tsx`
 
-New state and fake detection logic:
+Change the preview mode section (lines 66-86):
 
-```text
-State additions:
-  detectionLoading: boolean (default true)
-  detectedSpecies: string | null
-  detectedConfidence: number | null
-
-On photo load (useEffect):
-  - Set detectionLoading = true
-  - setTimeout 2-3s random delay
-  - Pick random species from list
-  - Pick random confidence 70-95
-  - Set results, detectionLoading = false
-
-UI additions (below photo preview):
-  - If detectionLoading: spinner + "Analyzing with BioCLIP..."
-  - If result ready: card showing species name + confidence %
-  - If species != "Unknown": orange warning banner
+**Before:**
 ```
+<div className="fixed inset-0 z-50 flex flex-col bg-background">
+  <img src={photoDataUrl} alt="Preview" className="flex-1 object-contain" />
+  <div className="flex gap-3 p-4">
+```
+
+**After:**
+```
+<div className="fixed inset-0 z-50 flex flex-col bg-background">
+  <div className="flex-1 flex items-center justify-center overflow-hidden p-4">
+    <img src={photoDataUrl} alt="Preview" className="max-h-full max-w-full object-contain rounded-xl" />
+  </div>
+  <div className="flex gap-3 p-4 pb-6">
+```
+
+This wraps the image in a flex container that centers it while constraining its size, ensuring the buttons below are always visible on screen.
 
 ### Files Modified
 
 | File | Change |
 |---|---|
-| `src/pages/Submit.tsx` | Add fake detection UI with loading state, result card, and warning banner |
-| `src/pages/HowItWorks.tsx` | Change `aspect-video` to `aspect-square` on species images |
-| `src/components/PhotoInput.tsx` | Add `capture="environment"` to file input, ensure min-h-[48px] on buttons |
-| `src/components/LocationInput.tsx` | Add toast on successful location fetch, increase retry button touch target |
+| `src/components/PhotoInput.tsx` | Fix preview layout so buttons stay visible below the image |
 
-### No Database or Storage Changes
+### No other changes needed
 
-No backend modifications needed. The fake detection is purely client-side UI.
-
+The detection UI on the Submit page is already implemented and will show once users can actually reach it by clicking "Continue".
