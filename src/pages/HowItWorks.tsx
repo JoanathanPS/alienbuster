@@ -11,17 +11,17 @@ const exampleSpecies = [
   {
     name: "Kudzu Vine",
     desc: "A fast-growing vine from Japan that smothers native vegetation across the southeastern US.",
-    image: "https://images.unsplash.com/photo-1597160220690-29db0b5539e6?w=600&h=400&fit=crop",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/77/Kudzu_on_trees_in_Atlanta%2C_Georgia.jpg/1280px-Kudzu_on_trees_in_Atlanta%2C_Georgia.jpg",
   },
   {
     name: "Burmese Python",
     desc: "Non-native constrictor threatening native wildlife in Florida's Everglades.",
-    image: "https://images.unsplash.com/photo-1531386151447-fd76ad50012f?w=600&h=400&fit=crop",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Python_molurus_bivittatus_Silliman_University.jpg/1280px-Python_molurus_bivittatus_Silliman_University.jpg",
   },
   {
     name: "Lionfish",
     desc: "Venomous Indo-Pacific fish invading Atlantic and Caribbean reefs, devastating local fish populations.",
-    image: "https://images.unsplash.com/photo-1535591273668-578e31182c4f?w=600&h=400&fit=crop",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Pterois_volitans_Manado-e_edit.jpg/1280px-Pterois_volitans_Manado-e_edit.jpg",
   },
 ];
 
