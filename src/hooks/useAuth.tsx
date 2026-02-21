@@ -25,21 +25,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    // Set up auth listener BEFORE getSession
+    let isMounted = true;
+    
+    const initAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!isMounted) return;
+      
+      if (session?.user) {
+        setSession(session);
+        setUser(session.user);
+        
+        const { data } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .eq("role", "admin")
+          .maybeSingle();
+        if (isMounted) {
+          setIsAdmin(!!data);
+        }
+      }
+      
+      if (isMounted) {
+        setLoading(false);
+      }
+    };
+    
+    initAuth();
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        if (!isMounted) return;
+        
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          // Check admin role
           const { data } = await supabase
             .from("user_roles")
             .select("role")
             .eq("user_id", session.user.id)
             .eq("role", "admin")
             .maybeSingle();
-          setIsAdmin(!!data);
+          if (isMounted) {
+            setIsAdmin(!!data);
+          }
         } else {
           setIsAdmin(false);
         }
@@ -48,13 +79,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (!session) setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {

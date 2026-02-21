@@ -1,69 +1,109 @@
-// TODO: Replace placeholder with real Google Earth Engine NDVI change detection via backend API
-import { useEffect, useState } from "react";
-import { Loader2, Satellite, AlertTriangle, CheckCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle, Loader2, Satellite, Slash } from "lucide-react";
 
-type Result = "anomaly" | "normal" | null;
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export function SatelliteCard() {
-  const [loading, setLoading] = useState(true);
-  const [result, setResult] = useState<Result>(null);
+export type NdviPayload = {
+  mean: number | null;
+  evi: number | null;
+  change: number | null;
+  anomaly: boolean | null;
+  satellite_score: number | null;
+  status: string;
+};
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setResult(Math.random() > 0.5 ? "anomaly" : "normal");
-      setLoading(false);
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, []);
+type SatelliteCardProps = {
+  loading?: boolean;
+  ndvi?: NdviPayload | null;
+};
+
+export function SatelliteCard({ loading = false, ndvi = null }: SatelliteCardProps) {
+  const status = ndvi?.status || "no location";
+  const isOk = !!ndvi && status.startsWith("ok");
+  const score = ndvi?.satellite_score || 0;
 
   return (
-    <div className="w-full max-w-sm overflow-hidden rounded-xl border border-border bg-card">
-      <div className="flex items-center gap-2 border-b border-border px-4 py-3">
-        <Satellite className="h-4 w-4 text-primary" />
-        <span className="text-sm font-semibold text-foreground">Satellite Vegetation Check</span>
-      </div>
+    <Card className="w-full">
+      <CardHeader className="space-y-1 pb-3">
+        <CardTitle className="flex items-center justify-between gap-3 text-base">
+          <span className="flex items-center gap-2">
+            <Satellite className="h-4 w-4 text-primary" aria-hidden="true" />
+            Satellite Analysis (Sentinel-2)
+          </span>
+          {ndvi?.anomaly === true ? (
+            <Badge variant="destructive">Anomaly Detected</Badge>
+          ) : ndvi?.anomaly === false ? (
+            <Badge variant="secondary">Normal</Badge>
+          ) : (
+            <Badge variant="outline">{status}</Badge>
+          )}
+        </CardTitle>
+      </CardHeader>
 
-      <div className="p-4">
-        {loading && (
-          <div className="flex items-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">Analyzing land-cover changes...</span>
+      <CardContent className="space-y-4">
+        {loading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            Fetching Sentinel-2 data (10m res)...
           </div>
-        )}
-
-        {!loading && result === "anomaly" && (
+        ) : !ndvi ? (
+          <div className="text-sm text-muted-foreground">Add a location to run the satellite check.</div>
+        ) : status.startsWith("unavailable") ? (
+          <div className="flex items-start gap-2 text-sm text-muted-foreground">
+            <Slash className="mt-0.5 h-4 w-4" aria-hidden="true" />
+            Satellite check unavailable (Earth Engine not authenticated).
+          </div>
+        ) : !isOk ? (
+          <div className="flex items-start gap-2 text-sm text-muted-foreground">
+            <Slash className="mt-0.5 h-4 w-4" aria-hidden="true" />
+            Satellite check: {ndvi.status}
+          </div>
+        ) : (
           <div className="space-y-3">
-            <div className="flex items-start gap-2">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
-              <p className="text-sm font-medium text-accent">
-                Unusual vegetation change detected at this location (NDVI drop)
-              </p>
+            {ndvi.anomaly ? (
+              <div className="flex items-start gap-2 text-sm">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden="true" />
+                <div>
+                  <div className="font-medium text-destructive">Significant vegetation change</div>
+                  <div className="text-muted-foreground">
+                    High probability of recent disturbance or rapid growth.
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-start gap-2 text-sm">
+                <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                <div>
+                  <div className="font-medium text-primary">Stable vegetation</div>
+                  <div className="text-muted-foreground">No significant anomalies in the last 60 days.</div>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4 rounded-lg border p-3 text-xs">
+              <div>
+                <span className="block text-muted-foreground">NDVI (Greenness)</span>
+                <span className="font-medium text-lg">{ndvi.mean?.toFixed(2) ?? "—"}</span>
+              </div>
+              <div>
+                <span className="block text-muted-foreground">EVI (Canopy)</span>
+                <span className="font-medium text-lg">{ndvi.evi?.toFixed(2) ?? "—"}</span>
+              </div>
+              <div>
+                <span className="block text-muted-foreground">Change Δ</span>
+                <span className={`font-medium text-lg ${ndvi.anomaly ? "text-destructive" : ""}`}>
+                  {ndvi.change && ndvi.change > 0 ? "+" : ""}
+                  {ndvi.change?.toFixed(2) ?? "—"}
+                </span>
+              </div>
+              <div>
+                <span className="block text-muted-foreground">Risk Score</span>
+                <span className="font-medium text-lg">{(score * 100).toFixed(0)}/100</span>
+              </div>
             </div>
           </div>
         )}
-
-        {!loading && result === "normal" && (
-          <div className="flex items-start gap-2">
-            <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-            <p className="text-sm font-medium text-primary">
-              Normal vegetation pattern
-            </p>
-          </div>
-        )}
-
-        {/* NDVI gradient bar placeholder */}
-        {!loading && (
-          <div className="mt-3">
-            <div className="h-3 w-full rounded-full" style={{
-              background: "linear-gradient(to right, hsl(0 84% 60%), hsl(45 93% 47%), hsl(142 71% 45%))"
-            }} />
-            <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
-              <span>Low NDVI</span>
-              <span>High NDVI</span>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

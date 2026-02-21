@@ -16,7 +16,8 @@
     --secondary-foreground: 222 47% 11%;
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;
-    --accent: 25 95% 53%;
+    /* Sci-fi accent (electric purple) */
+    --accent: 274 95% 55%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -24,10 +25,11 @@
     --input: 214 32% 91%;
     --ring: 142 71% 45%;
     --radius: 0.75rem;
-    --sidebar-background: 0 0% 98%;
+    --sidebar-background: var(--background);
     --sidebar-foreground: 240 5% 26%;
-    --sidebar-primary: 240 6% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
+    /* Sidebar primary matches app primary for consistent branding */
+    --sidebar-primary: 142 71% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 240 5% 96%;
     --sidebar-accent-foreground: 240 6% 10%;
     --sidebar-border: 220 13% 91%;
@@ -47,21 +49,23 @@
     --secondary-foreground: 210 40% 96%;
     --muted: 217 33% 14%;
     --muted-foreground: 215 20% 65%;
-    --accent: 25 95% 53%;
+    /* Sci-fi accent (electric purple) */
+    --accent: 274 95% 60%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
     --border: 217 33% 18%;
     --input: 217 33% 18%;
     --ring: 142 71% 45%;
-    --sidebar-background: 240 6% 10%;
+    --sidebar-background: var(--background);
     --sidebar-foreground: 240 5% 96%;
-    --sidebar-primary: 224 76% 48%;
+    /* Sidebar primary matches app primary for consistent branding */
+    --sidebar-primary: 142 71% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 240 4% 16%;
     --sidebar-accent-foreground: 240 5% 96%;
     --sidebar-border: 240 4% 16%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-ring: 142 71% 45%;
   }
 }
 

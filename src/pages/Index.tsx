@@ -1,8 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Camera, Bug, Shield, Leaf } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Bug, Camera, Radar, Satellite, ShieldCheck } from "lucide-react";
+
 import { PhotoInput } from "@/components/PhotoInput";
+import { Page } from "@/components/Page";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -24,48 +29,89 @@ const Index = () => {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center px-4 pb-24 pt-12">
-      {/* Hero */}
-      <div className="mb-8 flex flex-col items-center text-center">
-        <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10">
-          <Bug className="h-10 w-10 text-primary" />
+    <Page
+      title={
+        <div className="flex items-center gap-2">
+          <span>Alien Buster</span>
+          <Badge variant="secondary">Hackathon build</Badge>
         </div>
-        <h1 className="mb-2 text-3xl font-bold tracking-tight text-foreground">
-          Alien Buster
-        </h1>
-        <p className="max-w-sm text-muted-foreground">
-          Help protect our ecosystems. Report invasive species sightings in your area.
-        </p>
-      </div>
-
-      {/* Main CTA */}
-      <Button
-        size="lg"
-        className="mb-10 h-16 w-full max-w-sm gap-3 rounded-xl bg-accent text-lg font-semibold text-accent-foreground shadow-lg shadow-accent/25 hover:bg-accent/90"
-        onClick={() => setShowPhotoInput(true)}
-      >
-        <Camera className="h-6 w-6" />
-        Report Suspicious Species
-      </Button>
-
-      {/* Info cards */}
-      <div className="grid w-full max-w-sm gap-4">
-        <div className="flex items-start gap-3 rounded-xl border border-border bg-card p-4">
-          <Shield className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-          <div>
-            <p className="text-sm font-medium text-foreground">Early Warning System</p>
-            <p className="text-xs text-muted-foreground">Your reports help scientists track and respond to invasive species before they spread.</p>
+      }
+      description={
+        <span>
+          An early warning system that fuses citizen geo-tagged photos with satellite change detection to spot invasive outbreaks
+          before they spread.
+        </span>
+      }
+    >
+      <Card className="overflow-hidden border-border/60 bg-gradient-to-br from-primary/10 via-background to-accent/10">
+        <CardHeader className="space-y-2">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Radar className="h-4 w-4" aria-hidden="true" />
+            Detect 6–12 months earlier than traditional surveys
           </div>
-        </div>
-        <div className="flex items-start gap-3 rounded-xl border border-border bg-card p-4">
-          <Leaf className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-          <div>
-            <p className="text-sm font-medium text-foreground">Protect Native Wildlife</p>
-            <p className="text-xs text-muted-foreground">Invasive species cause billions in damage yearly. Every report counts toward conservation.</p>
+          <CardTitle className="text-2xl md:text-3xl">
+            Spot it. Snap it. Pin it. <span className="text-primary">Stop the spread.</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-2">
+            <Button
+              size="lg"
+              className="h-14 gap-3 rounded-xl bg-accent text-base font-semibold text-accent-foreground shadow-lg shadow-accent/25 hover:bg-accent/90"
+              onClick={() => setShowPhotoInput(true)}
+            >
+              <Camera className="h-5 w-5" aria-hidden="true" />
+              Report a sighting
+            </Button>
+            <Button size="lg" variant="secondary" className="h-14 rounded-xl" onClick={() => navigate("/how-it-works")}>
+              See how it works
+            </Button>
           </div>
-        </div>
+
+          <Alert className="border-primary/30 bg-primary/5">
+            <Bug className="h-4 w-4" />
+            <AlertTitle>Why this matters</AlertTitle>
+            <AlertDescription>
+              Invasive species move fast. Crowdsourced ground truth + remote sensing helps agencies verify signals, reduce false
+              positives, and coordinate response.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+
+      <div className="mt-6 grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Bug className="h-4 w-4 text-primary" aria-hidden="true" /> Citizen reports
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            Submit a geo-tagged photo + notes in seconds. Your report becomes real-time ground truth.
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Satellite className="h-4 w-4 text-primary" aria-hidden="true" /> Satellite correlation
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            Detect land-cover / vegetation anomalies and cross-check them against clustered field reports.
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <ShieldCheck className="h-4 w-4 text-primary" aria-hidden="true" /> Expert verification
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            Admin review turns sightings into a verified species database and triggers rapid response alerts.
+          </CardContent>
+        </Card>
       </div>
-    </div>
+    </Page>
   );
 };
 

@@ -1,8 +1,9 @@
 import { Home, FileText, MapPin, Info, Moon, Sun, Shield } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/hooks/useAuth";
+import { NavLink } from "@/components/NavLink";
 
 const baseNavItems = [
   { path: "/", label: "Home", icon: Home },
@@ -11,9 +12,8 @@ const baseNavItems = [
   { path: "/how-it-works", label: "Info", icon: Info },
 ];
 
-export function BottomNav() {
+export function BottomNav({ className }: { className?: string }) {
   const location = useLocation();
-  const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const { isAdmin } = useAuth();
 
@@ -22,30 +22,40 @@ export function BottomNav() {
     : baseNavItems;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 backdrop-blur-md">
-      <div className="mx-auto flex max-w-lg items-center justify-around py-2">
+    <nav
+      className={cn(
+        "sticky bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur-md",
+        className
+      )}
+      aria-label="Bottom navigation"
+    >
+      <div className="mx-auto flex max-w-3xl items-center justify-around px-2 py-2">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
+          const Icon = item.icon;
+
           return (
-            <button
+            <NavLink
               key={item.path}
-              onClick={() => navigate(item.path)}
+              to={item.path}
               className={cn(
-                "flex flex-col items-center gap-1 rounded-lg px-3 py-1.5 text-xs transition-colors",
+                "flex min-w-0 flex-1 flex-col items-center gap-1 rounded-lg px-2 py-1.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                 isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <item.icon className="h-5 w-5" />
-              <span>{item.label}</span>
-            </button>
+              <Icon className="h-5 w-5" aria-hidden="true" />
+              <span className="truncate">{item.label}</span>
+            </NavLink>
           );
         })}
         <button
+          type="button"
           onClick={toggleTheme}
-          className="flex flex-col items-center gap-1 rounded-lg px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+          className="flex flex-1 flex-col items-center gap-1 rounded-lg px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          aria-label="Toggle theme"
         >
-          {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-          <span>Theme</span>
+          {theme === "dark" ? <Sun className="h-5 w-5" aria-hidden="true" /> : <Moon className="h-5 w-5" aria-hidden="true" />}
+          <span className="truncate">Theme</span>
         </button>
       </div>
     </nav>

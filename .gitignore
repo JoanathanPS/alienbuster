@@ -12,6 +12,24 @@ dist
 dist-ssr
 *.local
 
+# Environment variables
+.env
+.env.*
+!.env.example
+!.env.local.example
+
+# Python / ML local artifacts
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Local demo artifacts (from ver5.py / experiments)
+uploads/
+Samples/
+invasive_reports.db
+ver5.py
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

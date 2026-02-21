@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+python-multipart
+pillow
+open_clip_torch
+torch
+earthengine-api
+python-dotenv
+piexif
+requests
