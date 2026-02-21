@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Send, Loader2, CheckCircle, ArrowLeft } from "lucide-react";
+import { Send, Loader2, CheckCircle, ArrowLeft, AlertTriangle, Bug } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,8 @@ interface SubmittedReport {
   longitude: number;
 }
 
+const FAKE_SPECIES = ["Kudzu Vine", "Burmese Python", "Lionfish", "Asian Carp", "Unknown"];
+
 const Submit = () => {
   const navigate = useNavigate();
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -27,6 +29,11 @@ const Submit = () => {
   const [submitState, setSubmitState] = useState<SubmitState>("form");
   const [submittedReport, setSubmittedReport] = useState<SubmittedReport | null>(null);
 
+  // TODO: Replace fake detection with real call to /api/identify (Python BioCLIP backend) after photo upload
+  const [detectionLoading, setDetectionLoading] = useState(true);
+  const [detectedSpecies, setDetectedSpecies] = useState<string | null>(null);
+  const [detectedConfidence, setDetectedConfidence] = useState<number | null>(null);
+
   useEffect(() => {
     const photo = sessionStorage.getItem("report-photo");
     if (!photo) {
@@ -34,6 +41,18 @@ const Submit = () => {
       return;
     }
     setPhotoPreview(photo);
+
+    // Simulate BioCLIP analysis with 2-3s delay
+    setDetectionLoading(true);
+    const delay = 2000 + Math.random() * 1000;
+    const timer = setTimeout(() => {
+      const species = FAKE_SPECIES[Math.floor(Math.random() * FAKE_SPECIES.length)];
+      const confidence = Math.floor(70 + Math.random() * 26);
+      setDetectedSpecies(species);
+      setDetectedConfidence(confidence);
+      setDetectionLoading(false);
+    }, delay);
+    return () => clearTimeout(timer);
   }, [navigate]);
 
   const handleSubmit = async () => {
@@ -131,8 +150,33 @@ const Submit = () => {
 
       {/* Photo preview */}
       {photoPreview && (
-        <div className="mb-6 overflow-hidden rounded-xl border border-border">
+        <div className="mb-4 overflow-hidden rounded-xl border border-border">
           <img src={photoPreview} alt="Captured species" className="h-48 w-full object-cover" />
+        </div>
+      )}
+
+      {/* Species detection result */}
+      {detectionLoading && (
+        <div className="mb-6 flex items-center gap-2 rounded-xl border border-border bg-card p-4">
+          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          <span className="text-sm text-muted-foreground">Analyzing with BioCLIP...</span>
+        </div>
+      )}
+      {!detectionLoading && detectedSpecies && (
+        <div className="mb-6 space-y-3">
+          <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-4">
+            <Bug className="h-5 w-5 text-primary" />
+            <div>
+              <p className="text-sm font-semibold text-foreground">Detected: {detectedSpecies}</p>
+              <p className="text-xs text-muted-foreground">Confidence: {detectedConfidence}%</p>
+            </div>
+          </div>
+          {detectedSpecies !== "Unknown" && (
+            <div className="flex items-center gap-2 rounded-xl border border-accent bg-accent/10 p-3">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-accent" />
+              <p className="text-xs font-medium text-accent">Potential invasive species — report submitted for review</p>
+            </div>
+          )}
         </div>
       )}
 

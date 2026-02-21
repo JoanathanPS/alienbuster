@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { MapPin, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useGeolocation } from "@/hooks/useGeolocation";
+import { toast } from "sonner";
 
 interface LocationInputProps {
   latitude: number | null;
@@ -13,6 +14,7 @@ interface LocationInputProps {
 
 export function LocationInput({ latitude, longitude, onLocationChange }: LocationInputProps) {
   const geo = useGeolocation();
+  const toastShown = useRef(false);
 
   useEffect(() => {
     geo.requestLocation();
@@ -21,6 +23,10 @@ export function LocationInput({ latitude, longitude, onLocationChange }: Locatio
   useEffect(() => {
     if (geo.latitude !== null && geo.longitude !== null) {
       onLocationChange(geo.latitude, geo.longitude);
+      if (!toastShown.current) {
+        toastShown.current = true;
+        toast.success("Location fetched!");
+      }
     }
   }, [geo.latitude, geo.longitude]);
 
@@ -64,7 +70,7 @@ export function LocationInput({ latitude, longitude, onLocationChange }: Locatio
       </div>
 
       {(geo.permissionDenied || geo.error) && (
-        <Button variant="outline" size="sm" onClick={geo.requestLocation}>
+        <Button variant="outline" size="sm" className="min-h-[48px]" onClick={geo.requestLocation}>
           <MapPin className="mr-1 h-3 w-3" /> Retry GPS
         </Button>
       )}
