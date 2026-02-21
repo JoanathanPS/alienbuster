@@ -2,17 +2,15 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Camera, Bug, Shield, Leaf } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CameraView } from "@/components/CameraView";
+import { PhotoInput } from "@/components/PhotoInput";
 
 const Index = () => {
   const navigate = useNavigate();
-  const [showCamera, setShowCamera] = useState(false);
+  const [showPhotoInput, setShowPhotoInput] = useState(false);
 
-  const handlePhotoTaken = (dataUrl: string, blob: Blob) => {
-    setShowCamera(false);
-    // Store in sessionStorage to pass to submit page
+  const handlePhotoReady = (dataUrl: string, blob: Blob) => {
+    setShowPhotoInput(false);
     sessionStorage.setItem("report-photo", dataUrl);
-    // Store blob as base64 for submission
     const reader = new FileReader();
     reader.onloadend = () => {
       sessionStorage.setItem("report-photo-base64", reader.result as string);
@@ -21,8 +19,8 @@ const Index = () => {
     reader.readAsDataURL(blob);
   };
 
-  if (showCamera) {
-    return <CameraView onPhotoTaken={handlePhotoTaken} onClose={() => setShowCamera(false)} />;
+  if (showPhotoInput) {
+    return <PhotoInput onPhotoReady={handlePhotoReady} onClose={() => setShowPhotoInput(false)} />;
   }
 
   return (
@@ -44,7 +42,7 @@ const Index = () => {
       <Button
         size="lg"
         className="mb-10 h-16 w-full max-w-sm gap-3 rounded-xl bg-accent text-lg font-semibold text-accent-foreground shadow-lg shadow-accent/25 hover:bg-accent/90"
-        onClick={() => setShowCamera(true)}
+        onClick={() => setShowPhotoInput(true)}
       >
         <Camera className="h-6 w-6" />
         Report Suspicious Species
