@@ -68,8 +68,7 @@ const Submit = () => {
         .from("reports-photos")
         .getPublicUrl(fileName);
 
-      // TODO: Call backend API /api/identify for ML species detection
-      // const identificationResult = await fetch('/api/identify', { method: 'POST', body: blob });
+      // TODO: After photo upload, call backend API /api/identify (Python BioCLIP) for species detection, then save species/confidence to DB
 
       // Save report to database
       const { error: insertError } = await supabase.from("reports").insert({
