@@ -1,62 +1,133 @@
 
 
-# Fix: Photo Preview Buttons Hidden + Detection UI Not Visible
+# Alien Buster -- Major Feature Upgrade
 
-## Problem
+## Summary
 
-After uploading an image in the PhotoInput component, the preview screen uses `flex-1` on the image element. This causes the image to expand and fill the entire screen, pushing the "Choose Another" and "Continue" buttons off the bottom of the viewport. The user only sees the image and doesn't know how to proceed.
+Add a Hotspots Map page with clustered report markers, a Satellite Vegetation Check placeholder on the success screen, an Admin Review page for verifying/rejecting reports, and colored status badges on My Reports.
 
-## Fix
+---
 
-### 1. PhotoInput Preview Layout (PhotoInput.tsx)
+## Changes
 
-Fix the preview mode so buttons are always visible:
+### 1. Hotspots Map Page
 
-- Remove `flex-1` from the image
-- Wrap the image in a container that takes available space but doesn't push buttons away
-- Use `overflow-hidden` on the image container and `object-contain` on the image
-- Keep the buttons pinned at the bottom with proper padding
+New page at `/hotspots` with a full-screen interactive Leaflet map.
 
-The layout should be:
-- Image area: fills available space above buttons, image centered within it
-- Button bar: always visible at the bottom, never pushed off-screen
+- Fetch all reports from the `reports` table
+- Plot circle markers: orange for "pending", green for "verified", red for "rejected"
+- Use Leaflet's built-in marker clustering (via the `leaflet.markercluster` library)
+- On marker click, show a popup with: photo thumbnail, date, notes, status, and coordinates
+- Show a loading spinner while reports are being fetched
+- Map centers on the user's location (if available) or a world view
 
-### 2. Submit Page Scroll Visibility (Submit.tsx)
+### 2. Bottom Navigation Update
 
-No code changes needed here -- the detection UI code is already implemented and working. The issue is entirely in the PhotoInput preview blocking the user from reaching the Submit page.
+Add "Hotspots" tab between "My Reports" and "How it works":
+- Icon: `MapPin` from lucide-react
+- Path: `/hotspots`
+- Move theme toggle to a smaller icon button in the corner to keep nav clean with 4 tabs
+
+### 3. Satellite Vegetation Check (Success Screen)
+
+On the Submit success screen, add a card below the map:
+- Show spinner "Analyzing land-cover changes..." for 3 seconds
+- Then show a randomly picked result: either "Unusual vegetation change detected (NDVI drop)" with a red/orange warning, or "Normal vegetation pattern" with a green check
+- Include a small placeholder colored gradient bar to simulate NDVI visualization
+- Comment: `// TODO: Replace placeholder with real Google Earth Engine NDVI change detection via backend API`
+
+### 4. Admin Review Page
+
+New page at `/admin-review` (not in bottom nav, accessed via URL):
+- Fetch all reports with `status = 'pending'`
+- List each report as a card with: photo, date, user, location, notes
+- Two action buttons per card: "Verify" (green) and "Reject" (red)
+- On click, update the report's `status` in the database and show a toast
+- Comment: `// TODO: Later add real auth so only experts can access review page`
+
+**Database change needed**: Add an RLS policy allowing anyone to UPDATE the `status` column on the `reports` table. (Currently only INSERT and SELECT policies exist.)
+
+### 5. Status Badges on My Reports
+
+Replace the plain text status with colored badges:
+- "pending" -- orange/amber background
+- "verified" -- green background
+- "rejected" -- red/destructive background
+
+### 6. Router Update
+
+Add routes for `/hotspots` and `/admin-review` in `App.tsx`.
 
 ---
 
 ## Technical Details
 
-### File: `src/components/PhotoInput.tsx`
+### Database Migration
 
-Change the preview mode section (lines 66-86):
-
-**Before:**
-```
-<div className="fixed inset-0 z-50 flex flex-col bg-background">
-  <img src={photoDataUrl} alt="Preview" className="flex-1 object-contain" />
-  <div className="flex gap-3 p-4">
-```
-
-**After:**
-```
-<div className="fixed inset-0 z-50 flex flex-col bg-background">
-  <div className="flex-1 flex items-center justify-center overflow-hidden p-4">
-    <img src={photoDataUrl} alt="Preview" className="max-h-full max-w-full object-contain rounded-xl" />
-  </div>
-  <div className="flex gap-3 p-4 pb-6">
+```sql
+-- Allow public updates to reports (status only for now)
+CREATE POLICY "Anyone can update report status"
+ON public.reports
+FOR UPDATE
+USING (true)
+WITH CHECK (true);
 ```
 
-This wraps the image in a flex container that centers it while constraining its size, ensuring the buttons below are always visible on screen.
+This is intentionally permissive since there is no auth system yet. The TODO comment on the admin page notes that real auth should be added later.
+
+### New Dependencies
+
+- `leaflet.markercluster` -- for marker clustering on the Hotspots map. Will need to import its CSS as well.
+
+### Files Created
+
+| File | Purpose |
+|---|---|
+| `src/pages/Hotspots.tsx` | Full-screen map with clustered report markers |
+| `src/pages/AdminReview.tsx` | Pending reports list with verify/reject actions |
 
 ### Files Modified
 
 | File | Change |
 |---|---|
-| `src/components/PhotoInput.tsx` | Fix preview layout so buttons stay visible below the image |
+| `src/App.tsx` | Add routes for `/hotspots` and `/admin-review` |
+| `src/components/BottomNav.tsx` | Add Hotspots tab with MapPin icon |
+| `src/pages/Submit.tsx` | Add satellite vegetation check card on success screen |
+| `src/pages/MyReports.tsx` | Add colored status badges (pending/verified/rejected) |
 
-### No other changes needed
+### Hotspots Map Component Structure
 
-The detection UI on the Submit page is already implemented and will show once users can actually reach it by clicking "Continue".
+```text
+Hotspots.tsx:
+  - Fetch all reports via supabase.from("reports").select("*")
+  - Initialize Leaflet map with OSM tiles
+  - Create MarkerClusterGroup
+  - For each report with lat/lng:
+    - Create circleMarker with color based on status
+    - Bind popup with HTML: photo img, date, notes, status badge
+  - Add cluster group to map
+  - Show Loader2 spinner during fetch
+```
+
+### Satellite Card Structure
+
+```text
+On success screen (Submit.tsx):
+  State: satelliteLoading (true), satelliteResult (null)
+  
+  useEffect on success:
+    - setTimeout 3s
+    - Pick random: "anomaly" or "normal"
+    - Set result
+  
+  UI:
+    - Card with Satellite icon
+    - If loading: spinner + "Analyzing land-cover changes..."
+    - If anomaly: orange warning with NDVI drop message
+    - If normal: green check with normal pattern message
+    - Colored gradient bar (CSS gradient: red -> yellow -> green)
+```
+
+### No changes to existing components
+
+PhotoInput, CameraView, LocationInput, ReportMap, and HowItWorks remain unchanged.
