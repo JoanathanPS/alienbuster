@@ -71,12 +71,12 @@ export function PhotoInput({ onPhotoReady, onClose }: PhotoInputProps) {
           className="flex-1 object-contain"
         />
         <div className="flex gap-3 p-4">
-          <Button variant="secondary" className="flex-1" onClick={resetPhoto}>
+          <Button variant="secondary" className="min-h-[48px] flex-1" onClick={resetPhoto}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Choose Another
           </Button>
           <Button
-            className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90"
+            className="min-h-[48px] flex-1 bg-accent text-accent-foreground hover:bg-accent/90"
             onClick={handleContinue}
           >
             Continue
@@ -127,6 +127,7 @@ export function PhotoInput({ onPhotoReady, onClose }: PhotoInputProps) {
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        capture="environment"
         className="hidden"
         onChange={handleFileChange}
       />

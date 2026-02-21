@@ -56,7 +56,7 @@ const HowItWorks = () => {
             <img
               src={s.image}
               alt={s.name}
-              className="aspect-video w-full object-cover"
+              className="aspect-square w-full object-cover"
               loading="lazy"
             />
             <div className="p-4">
