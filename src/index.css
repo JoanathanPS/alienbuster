@@ -4,68 +4,127 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222 84% 5%;
+    /* Fonts */
+    --font-sans: "Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+
+    /* ------------------------------------------------------------
+       Nature-forward premium tokens (requested)
+       ------------------------------------------------------------ */
+    --bg0: 205 35% 97%;
+    --bg1: 170 35% 95%;
+    --card2: 0 0% 100%;
+    --text: 222 40% 10%;
+    --muted: 215 18% 46%;
+    --border: 215 24% 88%;
+
+    /* Accent palette */
+    --leaf: 146 46% 32%;
+    --moss: 150 32% 26%;
+    --river: 196 52% 34%;
+    --sun: 34 90% 56%;
+    --danger: 3 74% 54%;
+    --warning: 32 92% 50%;
+
+    /* Glow (low-alpha, premium) */
+    --glowLeaf: 146 70% 52%;
+    --glowRiver: 196 70% 52%;
+
+    /* ------------------------------------------------------------
+       Shadcn compatibility tokens (mapped)
+       ------------------------------------------------------------ */
+    --background: var(--bg0);
+    --foreground: var(--text);
+
     --card: 0 0% 100%;
-    --card-foreground: 222 84% 5%;
+    --card-foreground: var(--text);
+
     --popover: 0 0% 100%;
-    --popover-foreground: 222 84% 5%;
-    --primary: 142 71% 45%;
+    --popover-foreground: var(--text);
+
+    --primary: var(--leaf);
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    /* CTA accent (orange) */
-    --accent: 24 95% 53%;
+
+    --secondary: 205 35% 92%;
+    --secondary-foreground: 222 40% 12%;
+
+    /* keep accent for CTAs but make it more sun-warm (still subtle) */
+    --accent: var(--sun);
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%;
+
+    --destructive: var(--danger);
     --destructive-foreground: 0 0% 100%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 142 71% 45%;
-    --radius: 0.75rem;
-    --sidebar-background: var(--background);
-    --sidebar-foreground: 240 5% 26%;
-    /* Sidebar primary matches app primary for consistent branding */
-    --sidebar-primary: 142 71% 45%;
+
+    --input: var(--border);
+    --ring: var(--river);
+
+    /* Rounded corners (16–24px) */
+    --radius: 1.25rem;
+
+    /* Sidebar tokens */
+    --sidebar-background: var(--bg0);
+    --sidebar-foreground: 222 20% 24%;
+    --sidebar-primary: var(--leaf);
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 5% 96%;
-    --sidebar-accent-foreground: 240 6% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-accent: 205 35% 92%;
+    --sidebar-accent-foreground: 222 40% 12%;
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--river);
   }
 
   .dark {
-    --background: 222 47% 6%;
-    --foreground: 210 40% 96%;
-    --card: 222 47% 9%;
-    --card-foreground: 210 40% 96%;
-    --popover: 222 47% 9%;
-    --popover-foreground: 210 40% 96%;
-    --primary: 142 71% 45%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 217 33% 14%;
-    --secondary-foreground: 210 40% 96%;
-    --muted: 217 33% 14%;
-    --muted-foreground: 215 20% 65%;
-    /* CTA accent (orange) */
-    --accent: 24 95% 56%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217 33% 18%;
-    --input: 217 33% 18%;
-    --ring: 142 71% 45%;
-    --sidebar-background: var(--background);
-    --sidebar-foreground: 240 5% 96%;
-    /* Sidebar primary matches app primary for consistent branding */
-    --sidebar-primary: 142 71% 45%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 4% 16%;
-    --sidebar-accent-foreground: 240 5% 96%;
-    --sidebar-border: 240 4% 16%;
-    --sidebar-ring: 142 71% 45%;
+    /* ------------------------------------------------------------
+       Dark: deep forest/ocean (default vibe)
+       ------------------------------------------------------------ */
+    --bg0: 210 35% 6%;
+    --bg1: 190 40% 7%;
+    --card: 210 30% 10%;
+    --card2: 210 24% 12%;
+    --text: 210 22% 95%;
+    --muted: 215 18% 70%;
+    --border: 210 22% 18%;
+
+    --leaf: 146 46% 44%;
+    --moss: 150 34% 34%;
+    --river: 196 54% 48%;
+    --sun: 34 92% 58%;
+    --danger: 3 74% 58%;
+    --warning: 32 94% 56%;
+
+    --glowLeaf: 146 70% 58%;
+    --glowRiver: 196 70% 60%;
+
+    --background: var(--bg0);
+    --foreground: var(--text);
+
+    --card-foreground: var(--text);
+
+    --popover: 210 30% 10%;
+    --popover-foreground: var(--text);
+
+    --primary: var(--leaf);
+    --primary-foreground: 210 35% 6%;
+
+    --secondary: 210 20% 14%;
+    --secondary-foreground: var(--text);
+
+    --accent: var(--sun);
+    --accent-foreground: 210 35% 6%;
+
+    --destructive: var(--danger);
+    --destructive-foreground: 210 35% 6%;
+
+    --input: var(--border);
+    --ring: var(--river);
+
+    --sidebar-background: var(--bg0);
+    --sidebar-foreground: var(--text);
+    --sidebar-primary: var(--leaf);
+    --sidebar-primary-foreground: 210 35% 6%;
+    --sidebar-accent: 210 20% 14%;
+    --sidebar-accent-foreground: var(--text);
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--river);
   }
 }
 
@@ -73,7 +132,70 @@
   * {
     @apply border-border;
   }
+
+  html {
+    color-scheme: dark;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: geometricPrecision;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display font-medium tracking-tight text-foreground;
+  }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.5;
+
+    /* Layered gradients (calm, bioluminescent) */
+    background:
+      radial-gradient(1200px 800px at 15% 15%, hsl(var(--river) / 0.22), transparent 60%),
+      radial-gradient(900px 700px at 85% 25%, hsl(var(--glowLeaf) / 0.16), transparent 55%),
+      radial-gradient(1200px 900px at 65% 90%, hsl(var(--sun) / 0.10), transparent 60%),
+      linear-gradient(180deg, hsl(var(--bg0)), hsl(var(--bg1)));
+
+    background-attachment: fixed;
+    overflow-x: hidden;
+  }
+
+  /* Subtle noise + slow drift (CSS-only) */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: -20%;
+    z-index: -1;
+    pointer-events: none;
+
+    background:
+      radial-gradient(circle at 20% 10%, hsl(var(--glowRiver) / 0.10), transparent 35%),
+      radial-gradient(circle at 80% 30%, hsl(var(--glowLeaf) / 0.08), transparent 40%),
+      radial-gradient(circle at 60% 80%, hsl(var(--sun) / 0.06), transparent 40%),
+      repeating-radial-gradient(circle at 20% 30%, hsl(0 0% 100% / 0.015) 0 1px, transparent 1px 5px);
+
+    filter: blur(0px);
+    transform: translate3d(0, 0, 0);
+    animation: ab-drift 22s ease-in-out infinite alternate;
+    opacity: 0.9;
+  }
+
+  @keyframes ab-drift {
+    0% {
+      transform: translate3d(-1.5%, -1%, 0) scale(1.02);
+    }
+    100% {
+      transform: translate3d(1.5%, 1%, 0) scale(1.03);
+    }
+  }
+
+  .ab-glow-leaf {
+    box-shadow: 0 0 0 1px hsl(var(--glowLeaf) / 0.12), 0 12px 30px hsl(var(--glowLeaf) / 0.08);
+  }
+
+  .ab-glow-river {
+    box-shadow: 0 0 0 1px hsl(var(--glowRiver) / 0.12), 0 12px 30px hsl(var(--glowRiver) / 0.08);
   }
 }
+

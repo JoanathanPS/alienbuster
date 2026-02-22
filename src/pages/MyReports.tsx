@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, FileText, Loader2 } from "lucide-react";
+import { ChevronDown, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { apiFetchJson } from "@/lib/apiFetch";
 import { resolveReportPhotoUrl } from "@/lib/reportPhotos";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { SatelliteVegetationCheck } from "@/components/SatelliteVegetationCheck";
 
 interface Report {
@@ -13,14 +14,15 @@ interface Report {
   created_at: string;
   user_id: string;
   user_email: string | null;
-  latitude: number | null;
-  longitude: number | null;
+  lat: number | null; // backend uses 'lat'
+  lon: number | null; // backend uses 'lon'
   photo_url: string | null;
   notes: string | null;
   status: string | null;
   species?: string | null;
   confidence?: number | null;
   is_invasive?: boolean | null;
+  ml_confidence?: number | null; // backend uses 'ml_confidence'
 }
 
 function extractSpecies(notes: string | null): string | null {
@@ -52,25 +54,21 @@ const MyReports = () => {
 
     const fetchReports = async () => {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("reports")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (!error && data) {
+      try {
+        const json = await apiFetchJson<{ reports: Report[] }>(`/my_reports?user_id=${user.id}`);
+        const data = json.reports || [];
         setReports(data);
 
         // Resolve signed URLs for thumbnails (backwards compatible with public URLs)
         const entries = await Promise.all(
-          (data as Report[]).map(async (r) => [r.id, await resolveReportPhotoUrl(r.photo_url)] as const)
+          data.map(async (r) => [r.id, await resolveReportPhotoUrl(r.photo_url)] as const)
         );
         setPhotoUrlById(Object.fromEntries(entries));
-      } else {
+      } catch (e) {
         setReports([]);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     };
 
     fetchReports();
@@ -80,21 +78,35 @@ const MyReports = () => {
     <div className="mx-auto max-w-lg px-4 pb-24 pt-6">
       <h2 className="mb-4 text-xl font-bold text-foreground">My Reports</h2>
 
-      {loading && (
-        <div className="flex justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      {loading ? (
+        <div className="space-y-3 py-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="rounded-2xl border border-white/10 bg-white/5 p-3">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-16 w-16 rounded-xl" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-3 w-56" />
+                  <div className="flex gap-2 pt-1">
+                    <Skeleton className="h-6 w-20 rounded-full" />
+                    <Skeleton className="h-6 w-24 rounded-full" />
+                  </div>
+                </div>
+                <Skeleton className="h-8 w-8 rounded-xl" />
+              </div>
+            </div>
+          ))}
         </div>
-      )}
-
-      {!loading && reports.length === 0 && (
+      ) : reports.length === 0 ? (
         <div className="flex flex-col items-center py-12 text-center">
           <FileText className="mb-3 h-12 w-12 text-muted-foreground/50" />
           <p className="text-muted-foreground">No reports found</p>
           <p className="text-xs text-muted-foreground">Submit a report to see it here</p>
         </div>
-      )}
+      ) : null}
 
-      <div className="space-y-3">
+      {!loading && reports.length > 0 ? (
+        <div className="space-y-3">
         {reportsWithSpecies.map((r) => {
           const isOpen = openId === r.id;
           return (
@@ -106,10 +118,7 @@ const MyReports = () => {
                   )}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs text-muted-foreground">
-                        {r.user_email ? r.user_email + " · " : ""}
-                        {new Date(r.created_at).toLocaleDateString()}
-                      </p>
+                      <p className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</p>
                       <div className="flex items-center gap-2">
                         <span
                           className={cn(
@@ -134,9 +143,9 @@ const MyReports = () => {
 
                     {r.species && <div className="mt-1 text-sm font-medium">{r.species}</div>}
 
-                    {r.latitude != null && r.longitude != null && (
+                    {r.lat != null && r.lon != null && (
                       <p className="mt-1 text-xs text-muted-foreground">
-                        Location: {r.latitude.toFixed(4)}, {r.longitude.toFixed(4)}
+                        Location: {r.lat.toFixed(4)}, {r.lon.toFixed(4)}
                       </p>
                     )}
 
@@ -148,10 +157,10 @@ const MyReports = () => {
                   <div className="space-y-3 border-t border-border p-3">
                     {r.notes && <div className="whitespace-pre-wrap text-sm text-muted-foreground">{r.notes}</div>}
 
-                    {r.latitude != null && r.longitude != null && (
+                    {r.lat != null && r.lon != null && (
                       <SatelliteVegetationCheck
-                        latitude={r.latitude}
-                        longitude={r.longitude}
+                        latitude={r.lat}
+                        longitude={r.lon}
                         species={r.species}
                         isInvasive={r.is_invasive ?? false}
                       />
@@ -162,7 +171,8 @@ const MyReports = () => {
             </Collapsible>
           );
         })}
-      </div>
+        </div>
+      ) : null}
     </div>
   );
 };

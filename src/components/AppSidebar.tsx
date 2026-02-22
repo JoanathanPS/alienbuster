@@ -1,9 +1,11 @@
-import { Home, FileText, MapPin, Info, Shield, Moon, Sun } from "lucide-react";
+import { Home, FileText, MapPin, Info, Shield, Moon, Sun, Radar, Siren, Layers } from "lucide-react";
 import { useLocation } from "react-router-dom";
 
 import { useAuth } from "@/hooks/useAuth";
+import { isExpertEmail } from "@/lib/expertAccess";
 import { useTheme } from "@/hooks/useTheme";
 import { NavLink } from "@/components/NavLink";
+import { Badge } from "@/components/ui/badge";
 import {
   Sidebar,
   SidebarContent,
@@ -22,6 +24,9 @@ const baseNavItems = [
   { path: "/", label: "Home", icon: Home },
   { path: "/my-reports", label: "My Reports", icon: FileText },
   { path: "/hotspots", label: "Hotspots", icon: MapPin },
+  { path: "/outbreaks", label: "Outbreaks", icon: Layers },
+  { path: "/intel", label: "Intel", icon: Radar, badge: "NEW" },
+  { path: "/response", label: "Response", icon: Siren },
   { path: "/how-it-works", label: "How it works", icon: Info },
 ] as const;
 
@@ -30,24 +35,24 @@ export function AppSidebar() {
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
-  // IMPORTANT: Hard gate expert UI to the allowlisted email only.
-  const isExpert = user?.email === "expert@example.com";
+  const isExpert = isExpertEmail(user?.email);
 
   const navItems = isExpert
-    ? [...baseNavItems, { path: "/expert-review", label: "Expert review", icon: Shield }]
+    ? [...baseNavItems, { path: "/expert", label: "Expert review", icon: Shield, badge: "EXPERT" }]
     : baseNavItems;
 
   return (
     <Sidebar
-      collapsible="offcanvas"
-      variant="sidebar"
+      collapsible="icon"
+      variant="floating"
       aria-label="Primary"
+      className="border-r border-white/10 bg-sidebar/25 backdrop-blur-2xl"
     >
       <SidebarHeader>
         <div className="flex items-center justify-between px-2 py-2">
           <div className="leading-tight">
-            <div className="text-sm font-semibold">Alien Buster</div>
-            <div className="text-xs text-muted-foreground">Early warning system</div>
+            <div className="text-sm font-semibold tracking-tight">AlienBuster</div>
+            <div className="text-xs text-muted-foreground">Monitoring console</div>
           </div>
         </div>
       </SidebarHeader>
@@ -57,15 +62,22 @@ export function AppSidebar() {
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => {
+              {navItems.map((item: any) => {
                 const isActive = location.pathname === item.path;
                 const Icon = item.icon;
                 return (
                   <SidebarMenuItem key={item.path}>
                     <SidebarMenuButton asChild isActive={isActive}>
-                      <NavLink to={item.path}>
-                        <Icon />
-                        <span>{item.label}</span>
+                      <NavLink to={item.path} className="flex items-center justify-between gap-2">
+                        <span className="flex items-center gap-2">
+                          <Icon />
+                          <span>{item.label}</span>
+                        </span>
+                        {item.badge ? (
+                          <Badge variant="outline" className="hidden text-[10px] md:inline-flex">
+                            {item.badge}
+                          </Badge>
+                        ) : null}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

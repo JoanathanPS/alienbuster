@@ -1,21 +1,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Loader2, Satellite, RefreshCw } from "lucide-react";
+import { AlertTriangle, Satellite, RefreshCw } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-import { apiUrl } from "@/lib/api";
-import { toast } from "sonner";
+import { apiFetchJson } from "@/lib/apiFetch";
+import { toast } from "@/components/ui/sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export type SatelliteAnalyzeResponse = {
-  ndvi_mean: number | null;
+export type SatelliteResponse = {
+  recent_ndvi: number | null;
+  baseline_ndvi: number | null;
   change: number | null;
   anomaly: boolean | null;
-  status: string;
-  correlation: "high" | "low" | "unknown";
-  message: string;
+  recent_window: { start: string; end: string };
+  baseline_window: { start: string; end: string };
 };
 
 type Props = {
@@ -33,7 +34,7 @@ function colorForAnomaly(anomaly: boolean | null) {
 
 export function SatelliteVegetationCheck({ latitude, longitude, species, isInvasive }: Props) {
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<SatelliteAnalyzeResponse | null>(null);
+  const [data, setData] = useState<SatelliteResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const mapRef = useRef<HTMLDivElement>(null);
@@ -47,34 +48,20 @@ export function SatelliteVegetationCheck({ latitude, longitude, species, isInvas
     const timeout = window.setTimeout(() => controller.abort(), 12_000);
 
     try {
-      const res = await fetch(apiUrl("/api/satellite-analyze"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          lat: latitude,
-          lon: longitude,
-          species: species || undefined,
-          is_invasive: isInvasive ?? undefined,
-        }),
-        signal: controller.signal,
-      });
-
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || `Satellite analyze failed (${res.status})`);
-      }
-
-      const json = (await res.json()) as SatelliteAnalyzeResponse;
+      const json = await apiFetchJson<SatelliteResponse>(
+        `/satellite?lat=${encodeURIComponent(latitude)}&lon=${encodeURIComponent(longitude)}`,
+        { timeoutMs: 12_000 },
+      );
       setData(json);
     } catch (e: any) {
-      const msg = e?.name === "AbortError" ? "Satellite analysis timed out" : e?.message || "Satellite analysis failed";
+      const msg = e?.message || "Satellite analysis failed";
       setError(msg);
       toast.error(msg);
     } finally {
       window.clearTimeout(timeout);
       setLoading(false);
     }
-  }, [latitude, longitude, species, isInvasive]);
+  }, [latitude, longitude]);
 
   useEffect(() => {
     run();
@@ -84,10 +71,16 @@ export function SatelliteVegetationCheck({ latitude, longitude, species, isInvas
     if (loading) return <Badge variant="outline">analyzing</Badge>;
     if (error) return <Badge variant="destructive">error</Badge>;
 
-    if (data?.correlation === "high") return <Badge className="bg-primary text-primary-foreground">High correlation</Badge>;
-    if (data?.correlation === "low") return <Badge variant="secondary">Low correlation</Badge>;
-    return <Badge variant="outline">Unknown</Badge>;
-  }, [loading, error, data]);
+    const anomaly = data?.anomaly;
+    if (anomaly == null) return <Badge variant="outline">Unknown</Badge>;
+
+    const high = anomaly === true && (isInvasive ?? false);
+    return high ? (
+      <Badge className="bg-primary text-primary-foreground">High correlation</Badge>
+    ) : (
+      <Badge variant="secondary">Low correlation</Badge>
+    );
+  }, [loading, error, data, isInvasive]);
 
   // Mini preview map (base map + colored overlay)
   useEffect(() => {
@@ -160,9 +153,15 @@ export function SatelliteVegetationCheck({ latitude, longitude, species, isInvas
 
       <CardContent className="space-y-4">
         {loading ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-            Analyzing land-cover changes...
+          <div className="space-y-3">
+            <Skeleton className="h-4 w-56" />
+            <div className="grid grid-cols-2 gap-3">
+              <Skeleton className="h-16 w-full rounded-2xl" />
+              <Skeleton className="h-16 w-full rounded-2xl" />
+              <Skeleton className="h-16 w-full rounded-2xl" />
+              <Skeleton className="h-16 w-full rounded-2xl" />
+            </div>
+            <Skeleton className="h-40 w-full rounded-2xl" />
           </div>
         ) : error ? (
           <div className="space-y-2">
@@ -172,7 +171,6 @@ export function SatelliteVegetationCheck({ latitude, longitude, species, isInvas
               Retry satellite check
             </Button>
             <div className="text-xs text-muted-foreground">
-              {/* TODO: Integrate real Google Earth Engine NDVI via backend /api/satellite-analyze */}
               If Earth Engine isn’t authenticated, this check can show as unavailable.
             </div>
           </div>
@@ -185,17 +183,23 @@ export function SatelliteVegetationCheck({ latitude, longitude, species, isInvas
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden="true" />
                 <div>
                   <div className="font-medium text-destructive">Vegetation anomaly detected</div>
-                  <div className="text-muted-foreground">This can indicate disturbance or rapid growth.</div>
+                  <div className="text-muted-foreground">NDVI dropped compared to last year’s baseline window.</div>
                 </div>
               </div>
-            ) : (
+            ) : data.anomaly === false ? (
               <div className="text-sm text-muted-foreground">No major vegetation anomaly detected.</div>
+            ) : (
+              <div className="text-sm text-muted-foreground">Satellite anomaly status unavailable.</div>
             )}
 
             <div className="grid grid-cols-2 gap-4 rounded-lg border p-3 text-xs">
               <div>
-                <span className="block text-muted-foreground">NDVI Mean</span>
-                <span className="font-medium text-lg">{data.ndvi_mean?.toFixed(2) ?? "—"}</span>
+                <span className="block text-muted-foreground">Recent NDVI</span>
+                <span className="font-medium text-lg">{data.recent_ndvi?.toFixed(2) ?? "—"}</span>
+              </div>
+              <div>
+                <span className="block text-muted-foreground">Baseline NDVI</span>
+                <span className="font-medium text-lg">{data.baseline_ndvi?.toFixed(2) ?? "—"}</span>
               </div>
               <div>
                 <span className="block text-muted-foreground">Change Δ</span>
@@ -208,15 +212,21 @@ export function SatelliteVegetationCheck({ latitude, longitude, species, isInvas
                 <span className="block text-muted-foreground">Anomaly</span>
                 <span className="font-medium text-lg">{data.anomaly === true ? "Yes" : data.anomaly === false ? "No" : "—"}</span>
               </div>
-              <div>
-                <span className="block text-muted-foreground">Engine status</span>
-                <span className="font-medium">{data.status}</span>
-              </div>
             </div>
 
             <div className="space-y-2">
               <div className="text-sm font-medium">Ground ↔ Satellite correlation</div>
-              <div className="text-sm text-muted-foreground whitespace-pre-wrap">{data.message}</div>
+              <div className="text-sm text-muted-foreground whitespace-pre-wrap">
+                {data.anomaly === true && (isInvasive ?? false)
+                  ? `High correlation: Possible ${species || "invasive"} outbreak detected`
+                  : "Low correlation: No major vegetation anomaly"
+                }
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Recent window: {data.recent_window.start} → {data.recent_window.end}
+                {"\n"}
+                Baseline window: {data.baseline_window.start} → {data.baseline_window.end}
+              </div>
             </div>
 
             <div>

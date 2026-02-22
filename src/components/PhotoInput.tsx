@@ -63,18 +63,7 @@ export function PhotoInput({ onPhotoReady, onClose }: PhotoInputProps) {
   if (mode === "preview" && photoDataUrl) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col bg-background">
-        <div className="flex items-center justify-between border-b border-border bg-card/95 px-4 py-3">
-          <Button
-            variant="secondary"
-            className="min-h-[48px]"
-            onClick={() => {
-              clearPhoto();
-              if (source === "camera") setMode("camera");
-              else setMode("choose");
-            }}
-          >
-            Retake
-          </Button>
+        <div className="flex items-center justify-end px-4 py-3">
           <Button
             variant="ghost"
             size="icon"
@@ -86,17 +75,30 @@ export function PhotoInput({ onPhotoReady, onClose }: PhotoInputProps) {
           </Button>
         </div>
 
-        <div className="flex-1 overflow-hidden p-4">
+        <div className="flex-1 overflow-hidden px-4 pb-4">
           <img src={photoDataUrl} alt="Preview" className="h-full w-full rounded-xl object-contain" />
         </div>
 
         <div className="border-t border-border bg-card/95 p-4 pb-6">
-          <Button
-            className="min-h-[56px] w-full rounded-xl bg-accent text-accent-foreground shadow-lg shadow-accent/25 hover:bg-accent/90"
-            onClick={handleContinue}
-          >
-            Continue
-          </Button>
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              variant="secondary"
+              className="min-h-[56px] w-full rounded-xl"
+              onClick={() => {
+                clearPhoto();
+                if (source === "camera") setMode("camera");
+                else setMode("choose");
+              }}
+            >
+              Retake / Choose Another
+            </Button>
+            <Button
+              className="min-h-[56px] w-full rounded-xl bg-accent text-accent-foreground shadow-lg shadow-accent/25 hover:bg-accent/90"
+              onClick={handleContinue}
+            >
+              Continue
+            </Button>
+          </div>
         </div>
       </div>
     );

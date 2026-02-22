@@ -18,6 +18,13 @@ dist-ssr
 !.env.example
 !.env.local.example
 
+# Backend env (local only)
+backend/.env
+backend/.env.*
+
+# Sometimes created by editors/users
+.env copy
+
 # Python / ML local artifacts
 __pycache__/
 *.pyc
@@ -28,7 +35,15 @@ venv/
 uploads/
 Samples/
 invasive_reports.db
+backend/local_reports.sqlite
+backend/*.sqlite
+backend/*.sqlite3
 ver5.py
+
+# Local model weights
+models/
+backend/models/
+*.bin
 
 # Editor directories and files
 .vscode/*

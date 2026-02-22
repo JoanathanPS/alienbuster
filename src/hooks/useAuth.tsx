@@ -26,58 +26,70 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
-    
-    const initAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!isMounted) return;
-      
-      if (session?.user) {
-        setSession(session);
-        setUser(session.user);
-        
-        const { data } = await supabase
+
+    const checkAdmin = async (session: Session | null) => {
+      if (!session?.user) return false;
+
+      try {
+        const { data, error } = await supabase
           .from("user_roles")
           .select("role")
           .eq("user_id", session.user.id)
           .eq("role", "admin")
           .maybeSingle();
-        if (isMounted) {
-          setIsAdmin(!!data);
-        }
-      }
-      
-      if (isMounted) {
-        setLoading(false);
+
+        // If RLS/table is misconfigured, treat as non-admin (do not block auth).
+        if (error) return false;
+        return !!data;
+      } catch {
+        return false;
       }
     };
-    
-    initAuth();
-    
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+
+    const initAuth = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
         if (!isMounted) return;
-        
-        setSession(session);
-        setUser(session?.user ?? null);
 
-        if (session?.user) {
-          const { data } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", session.user.id)
-            .eq("role", "admin")
-            .maybeSingle();
-          if (isMounted) {
-            setIsAdmin(!!data);
-          }
+        if (session) {
+          setSession(session);
+          setUser(session.user);
+          const admin = await checkAdmin(session);
+          if (isMounted) setIsAdmin(admin);
         } else {
-          setIsAdmin(false);
+           // Explicitly set to null if no session
+           setSession(null);
+           setUser(null);
         }
-
-        setLoading(false);
+      } catch (e) {
+        console.error("Auth init error", e);
+      } finally {
+        if (isMounted) setLoading(false);
       }
-    );
+    };
+
+    initAuth();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!isMounted) return;
+
+      setSession(session);
+      setUser(session?.user ?? null);
+
+      if (session?.user) {
+        const admin = await checkAdmin(session);
+        if (isMounted) setIsAdmin(admin);
+      } else {
+        if (isMounted) setIsAdmin(false);
+      }
+
+      setLoading(false);
+    });
 
     return () => {
       isMounted = false;
@@ -86,10 +98,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    setIsAdmin(false);
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error("Error signing out:", error);
+    } finally {
+      setUser(null);
+      setSession(null);
+      setIsAdmin(false);
+      localStorage.removeItem("sb-zqkjatpbnqsyugtfokkg-auth-token"); // Clear Supabase token if known
+      // We don't want to clear everything in localStorage as it might have other app settings
+    }
   };
 
   return (

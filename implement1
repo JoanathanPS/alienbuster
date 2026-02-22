@@ -1,0 +1,90 @@
+# Problem
+Turn the app into a cohesive local operational system where citizen reports, satellite change detection, and verification workflows combine to reduce false positives and accelerate response.
+# Current state
+Backend (`backend/server.py`) already provides:
+* BioCLIP-ish `/detect` (top-1)
+* `/satellite_change` (NDVI windows + timeseries + Dynamic World shift)
+* SQLite-backed `/report`, `/reports/nearby`, `/review_queue`, `/review/{id}`, `/alerts/preview`, `/risk_alert`
+Frontend already provides:
+* `/intel` Satellite & Correlation page (manual inputs)
+* `/expert` queue UI
+Missing: fusion engine endpoint + calibrated explanations; verified species DB export; needs-more-info workflow; outbreaks + tasks; agency alert templates; learning loop (active queue + prompt/top-k + citizen feedback); knowledge sidebar on every page.
+# Proposed changes
+## 1) Database schema extensions (SQLite)
+Extend `backend/db.py:init_db()` to add tables/columns:
+* `reports` additions: `description`, `photo_quality`, `recommended_action`, `fused_components_json`, `fused_reasons_json`, `needs_more_info_message`, `needs_more_info_requested_photos_json`, `citizen_feedback_json` (optional).
+* New tables:
+    * `reporters(user_id PK, reputation REAL)`
+    * `species_verifications(...)`
+    * `confusion_cases(...)`
+    * `outbreaks(...)`
+    * `tasks(...)`
+Provide helper functions for:
+* get/set reporter reputation and update on expert decisions
+* insert species verification on verify
+* request-more-info persistence
+* outbreaks CRUD + recompute
+* tasks CRUD
+* active learning queue query
+## 2) Fusion Engine
+Add `backend/fusion.py`:
+* Computes component scores (ml, density+similarity, satellite, reputation, photo_quality, seasonality)
+* Weighted risk formula configurable via env
+* Calibration/damping rules (caps/boosts/unknown-native cap)
+* Produces `fused_risk`, `components`, `reasons[]`, and `recommended_action`
+Add `POST /fuse` to `backend/server.py`:
+* Accept `report_id` optional; otherwise accept lat/lon/species/ml_confidence/user_id/description and optional `photo_base64`.
+* Uses `backend/satellite.get_satellite_change()` + nearby report queries + reputation table.
+* Returns fused output; optionally persists back onto report if `report_id` provided.
+Update `POST /report` to call fusion engine so all stored reports have calibrated fused fields.
+## 3) Verified Species Database
+Add `species_verifications` table + endpoints in `backend/server.py`:
+* `GET /species/verified?species=&since=&bbox=` returns GeoJSON FeatureCollection
+* `GET /exports/verified_species.geojson` returns same as downloadable GeoJSON
+Hook into expert review:
+* Extend `/review/{id}` to accept confidence override and `needs_more_info` decision.
+* Implement `POST /report/{id}/request_more_info` to set status + requested fields.
+On verify:
+* Insert into `species_verifications` and update reporter reputation +0.05.
+On reject:
+* Insert `confusion_cases` and update reporter reputation -0.05.
+## 4) Outbreak detection
+Add `backend/outbreaks.py`:
+* DBSCAN clustering per species using reports in last 60 days where `is_invasive=1` and `fused_risk>=0.70`.
+* Write to `outbreaks` table with centroid, radius_km, mean_risk, ndvi_anomaly_rate, status.
+Endpoints:
+* `GET /outbreaks`, `GET /outbreaks/{id}`, `POST /outbreaks/recompute`
+Optional dev scheduler (APScheduler) to recompute every 10 minutes when `OUTBREAKS_SCHEDULER_ENABLED=true`.
+## 5) Response coordination
+Add `tasks` table + endpoints:
+* `POST /tasks`, `GET /tasks`, `POST /tasks/{id}/update`
+Extend alerts:
+* Add `POST /alerts/agency` which formats an “agency template” email (map link to frontend, outbreak summary, playbook based on species category) and sends via existing SMTP env config.
+## 6) Learning loop
+Add `backend/prompts.py` and update `/detect`:
+* Support prompt templates by category and negative prompts.
+* Return top-5 candidates: add `topk` array while keeping existing top-1 fields for backwards compatibility.
+Add `GET /training/active_queue`:
+* returns 25 prioritized reports (medium confidence, high risk unverified, new geographies, etc.).
+Add citizen feedback endpoint (lightweight):
+* `POST /feedback` with report_id/species/was_correct to store in SQLite and influence active queue.
+## 7) Frontend integration
+* Add `src/components/KnowledgeSidebar.tsx` (right-side Sheet) shown on every page:
+    * recent actions (localStorage)
+    * local context cues
+    * FAQ
+    * system status (calls `GET /status` new backend endpoint)
+    * recent verified species near current location (calls `/species/verified`)
+* Extend Submit flow:
+    * show BioCLIP top-5
+    * call `/fuse` after `/detect` + satellite to display fused risk + explanation
+    * show recommended action and status messaging
+    * add “Was this correct?” buttons posting to `/feedback`
+* Add new pages:
+    * `src/pages/ResponseCenter.tsx` at `/response`
+    * `src/pages/Outbreaks.tsx` at `/outbreaks`
+* Update nav (sidebar + bottom nav) + Vite proxy.
+# Validation
+* Backend: `python -m py_compile` for new modules
+* Frontend: `npm run build`
+* Curl: `/detect`, `/fuse`, `/satellite_change`, `/outbreaks`, `/tasks`, `/review_queue`.

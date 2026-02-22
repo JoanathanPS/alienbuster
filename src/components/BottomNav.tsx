@@ -1,14 +1,16 @@
-import { Home, FileText, MapPin, Info, Moon, Sun, Shield } from "lucide-react";
+import { Home, FileText, MapPin, Info, Moon, Sun, Shield, Radar } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/hooks/useAuth";
+import { isExpertEmail } from "@/lib/expertAccess";
 import { NavLink } from "@/components/NavLink";
 
 const baseNavItems = [
   { path: "/", label: "Home", icon: Home },
   { path: "/my-reports", label: "My Reports", icon: FileText },
   { path: "/hotspots", label: "Hotspots", icon: MapPin },
+  { path: "/intel", label: "Intel", icon: Radar },
   { path: "/how-it-works", label: "How it works", icon: Info },
 ];
 
@@ -17,11 +19,10 @@ export function BottomNav({ className }: { className?: string }) {
   const { theme, toggleTheme } = useTheme();
   const { user } = useAuth();
 
-  // IMPORTANT: Hard gate expert UI to the allowlisted email only.
-  const isExpert = user?.email === "expert@example.com";
+  const isExpert = isExpertEmail(user?.email);
 
   const navItems = isExpert
-    ? [...baseNavItems, { path: "/expert-review", label: "Review", icon: Shield }]
+    ? [...baseNavItems, { path: "/expert", label: "Review", icon: Shield }]
     : baseNavItems;
 
   return (

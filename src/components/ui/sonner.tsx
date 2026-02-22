@@ -1,27 +1,32 @@
-import { useTheme } from "next-themes";
-import { Toaster as Sonner, toast } from "sonner";
+import { Toaster as HotToaster, toast as hotToast } from "react-hot-toast";
 
-type ToasterProps = React.ComponentProps<typeof Sonner>;
+import { useTheme } from "@/hooks/useTheme";
 
-const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme();
+const Toaster = () => {
+  const { theme } = useTheme();
 
   return (
-    <Sonner
-      theme={theme as ToasterProps["theme"]}
-      className="toaster group"
+    <HotToaster
+      position="top-right"
       toastOptions={{
-        classNames: {
-          toast:
-            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
-          description: "group-[.toast]:text-muted-foreground",
-          actionButton: "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
-          cancelButton: "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
+        duration: 3500,
+        style: {
+          background: "hsla(210, 30%, 10%, 0.55)",
+          color: "hsl(210, 22%, 95%)",
+          border: "1px solid hsla(0, 0%, 100%, 0.10)",
+          backdropFilter: "blur(16px)",
+          borderRadius: "18px",
+          boxShadow: "0 26px 80px -55px rgba(0,0,0,0.9)",
         },
+        className: theme === "light" ? "ab-toast-light" : "ab-toast-dark",
       }}
-      {...props}
     />
   );
 };
+
+// Backwards compatible API: some screens call toast.message(...)
+const toast = Object.assign(hotToast, {
+  message: hotToast,
+});
 
 export { Toaster, toast };

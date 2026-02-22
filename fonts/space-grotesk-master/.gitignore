@@ -1,0 +1,10 @@
+# file manager empty files
+.DS_Store
+.empty
+.sparkleshare
+# temporary files
+*(Autosaved).glyphs
+*.vfbak
+# minisite files
+/docs/node_modules
+/docs/package-lock.json

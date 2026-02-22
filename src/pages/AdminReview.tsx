@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveReportPhotoUrl } from "@/lib/reportPhotos";
 import { useAuth } from "@/hooks/useAuth";
-import { toast } from "sonner";
+import { EXPERT_EMAILS, isExpertEmail } from "@/lib/expertAccess";
+import { toast } from "@/components/ui/sonner";
 
 interface Report {
   id: number;
@@ -19,9 +20,7 @@ interface Report {
 
 const AdminReview = () => {
   const { user, loading: authLoading } = useAuth();
-
-  // IMPORTANT: Hard gate expert access to the allowlisted email only.
-  const isExpert = user?.email === "expert@example.com";
+  const isExpert = isExpertEmail(user?.email);
 
   const [reports, setReports] = useState<Report[]>([]);
   const [photoUrlById, setPhotoUrlById] = useState<Record<number, string | null>>({});
@@ -80,12 +79,9 @@ const AdminReview = () => {
       <div className="flex min-h-screen flex-col items-center justify-center px-4">
         <ShieldX className="mb-4 h-16 w-16 text-destructive" />
         <h2 className="mb-2 text-2xl font-bold text-foreground">Access Denied</h2>
-        <p className="text-center text-muted-foreground">
-          Only expert users can access the Expert Review page.
-        </p>
+        <p className="text-center text-muted-foreground">Only expert users can access the Expert Review page.</p>
         <p className="mt-2 text-center text-xs text-muted-foreground">
-          {/* TODO: Use Supabase auth roles for real expert access */}
-          Temporary hack: allowlist expert@example.com.
+          Allowlist: {EXPERT_EMAILS.join(", ")}
         </p>
       </div>
     );
@@ -136,7 +132,7 @@ const AdminReview = () => {
               )}
               <div className="mt-4 flex gap-3">
                 <Button
-                  className="min-h-[48px] flex-1 bg-accent text-accent-foreground hover:bg-accent/90"
+                  className="min-h-[48px] flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
                   onClick={() => updateStatus(r.id, "verified")}
                   disabled={updating === r.id}
                 >

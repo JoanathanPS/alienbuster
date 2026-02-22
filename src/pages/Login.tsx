@@ -3,11 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { Bug, Loader2, Mail } from "lucide-react";
+import { Bug, Loader2, Mail, Lock } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 
 const schema = z.object({
   email: z.string().email("Enter a valid email"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 type Values = z.infer<typeof schema>;
@@ -25,7 +26,7 @@ type Values = z.infer<typeof schema>;
 export default function Login() {
   const navigate = useNavigate();
   const { session } = useAuth();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<"login" | "signup" | null>(null);
   const [oauthLoading, setOauthLoading] = useState(false);
 
   const redirectTo = useMemo(() => {
@@ -50,25 +51,49 @@ export default function Login() {
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
-    defaultValues: { email: "" },
+    defaultValues: { email: "", password: "" },
   });
 
-  const sendMagicLink = async (values: Values) => {
-    setLoading(true);
+  const logIn = async (values: Values) => {
+    setLoading("login");
     try {
-      const { error } = await supabase.auth.signInWithOtp({
+      const { error } = await supabase.auth.signInWithPassword({
         email: values.email,
+        password: values.password,
+      });
+      if (error) throw error;
+      toast.success("Signed in");
+      // redirect handled by session effect
+    } catch (e: any) {
+      toast.error(e?.message || "Login failed");
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const signUp = async (values: Values) => {
+    setLoading("signup");
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password,
         options: {
           emailRedirectTo: window.location.origin,
         },
       });
 
       if (error) throw error;
-      toast.success("Magic link sent — check your email");
+
+      // Some projects require email confirmation; others immediately return a session.
+      if (!data.session) {
+        toast.success("Account created — check your email to confirm, then log in");
+      } else {
+        toast.success("Account created");
+      }
     } catch (e: any) {
-      toast.error(e?.message || "Failed to send magic link");
+      toast.error(e?.message || "Sign up failed");
     } finally {
-      setLoading(false);
+      setLoading(null);
     }
   };
 
@@ -110,7 +135,7 @@ export default function Login() {
 
         <CardContent className="space-y-4">
           <Form {...form}>
-            <form className="space-y-4" onSubmit={form.handleSubmit(sendMagicLink)}>
+            <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
               <FormField
                 control={form.control}
                 name="email"
@@ -128,20 +153,63 @@ export default function Login() {
                 )}
               />
 
-              <Button
-                type="submit"
-                className="w-full min-h-[48px] bg-accent text-accent-foreground hover:bg-accent/90"
-                disabled={loading || oauthLoading}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                    Sending magic link...
-                  </>
-                ) : (
-                  "Send magic link"
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                        <Input
+                          className="pl-9"
+                          type="password"
+                          placeholder="••••••••"
+                          autoComplete="current-password"
+                          {...field}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
-              </Button>
+              />
+
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  type="button"
+                  className="min-h-[48px] bg-accent text-accent-foreground hover:bg-accent/90"
+                  disabled={!!loading || oauthLoading}
+                  onClick={form.handleSubmit(logIn)}
+                >
+                  {loading === "login" ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                      Logging in...
+                    </>
+                  ) : (
+                    "Log In"
+                  )}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="min-h-[48px]"
+                  disabled={!!loading || oauthLoading}
+                  onClick={form.handleSubmit(signUp)}
+                >
+                  {loading === "signup" ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                      Signing up...
+                    </>
+                  ) : (
+                    "Sign Up"
+                  )}
+                </Button>
+              </div>
             </form>
           </Form>
 
@@ -171,7 +239,7 @@ export default function Login() {
 
           <div className="rounded-md border border-border bg-muted/20 p-3 text-xs text-muted-foreground">
             <div className="font-medium text-foreground">Supabase setup</div>
-            <div className="mt-1">Enable Email (magic link) + Google in Supabase Authentication → Providers.</div>
+            <div className="mt-1">Enable Email/Password + Google in Supabase Authentication → Providers.</div>
           </div>
         </CardContent>
       </Card>
