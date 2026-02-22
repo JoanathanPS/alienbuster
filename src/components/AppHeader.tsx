@@ -94,14 +94,8 @@ export function AppHeader({ onOpenCommandPalette }: { onOpenCommandPalette?: () 
                     size="sm"
                     className="h-10 gap-2 px-2 text-muted-foreground hover:bg-white/5 hover:text-foreground"
                     onClick={async () => {
-                      try {
-                        await signOut();
-                        toast.success("Signed out");
-                        navigate("/login");
-                      } catch (e) {
-                        console.error("Logout failed", e);
-                        navigate("/login");
-                      }
+                      // signOut handles redirect and state clearing
+                      await signOut();
                     }}
                     aria-label="Logout"
                   >

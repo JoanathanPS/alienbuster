@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { supabaseHardLogout } from "@/lib/logout";
 
 interface AuthContextType {
   user: User | null;
@@ -98,17 +99,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (error) {
-      console.error("Error signing out:", error);
-    } finally {
-      setUser(null);
-      setSession(null);
-      setIsAdmin(false);
-      localStorage.removeItem("sb-zqkjatpbnqsyugtfokkg-auth-token"); // Clear Supabase token if known
-      // We don't want to clear everything in localStorage as it might have other app settings
-    }
+    // Delegate to the hard logout helper
+    await supabaseHardLogout();
   };
 
   return (

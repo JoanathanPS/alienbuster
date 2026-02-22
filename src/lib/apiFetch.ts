@@ -55,6 +55,12 @@ export async function apiFetch(path: string, opts: ApiFetchOptions = {}): Promis
 
       if (!res.ok) {
         const bodyText = await res.text().catch(() => "");
+        if (res.status === 404) {
+          throw new ApiFetchError(`Backend endpoint missing: ${path} — run backend update or sync routes`, {
+            status: 404,
+            bodyText
+          });
+        }
         throw new ApiFetchError(bodyText || `${res.status} ${res.statusText}`, {
           status: res.status,
           bodyText,

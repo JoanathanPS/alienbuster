@@ -2,26 +2,12 @@ from __future__ import annotations
 
 import datetime as _dt
 import json
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, TypedDict
 
 from backend.earthengine import _try_init_ee
 
-
-@dataclass(frozen=True)
-class SatelliteResult:
-    recent_window: List[str]
-    baseline_window: List[str]
-    ndvi_recent: Optional[float]
-    ndvi_baseline: Optional[float]
-    ndvi_change: Optional[float]
-    ndvi_anomaly: Optional[bool]
-    ndvi_timeseries: List[Dict[str, Any]]
-    landcover_recent: Optional[Dict[str, Any]]
-    landcover_baseline: Optional[Dict[str, Any]]
-    landcover_shift: Optional[float]
-    status: str
-
+# Define the canonical schema using TypedDict for clarity (or just dict)
+# But we will return a dict directly to ensure JSON compatibility and exact keys.
 
 def get_satellite_change(
     lat: float,
@@ -29,21 +15,41 @@ def get_satellite_change(
     *,
     project: Optional[str] = None,
     radius_m: float = 1000.0,
-) -> SatelliteResult:
+) -> Dict[str, Any]:
+    
+    # Default response structure (error state)
+    def error_response(msg: str, debug: Dict[str, Any] = {}) -> Dict[str, Any]:
+        return {
+            "ok": False,
+            "error": msg,
+            "recent_window": [],
+            "baseline_window": [],
+            "ndvi_recent": None,
+            "ndvi_baseline": None,
+            "ndvi_change": None,
+            "ndvi_anomaly": None,
+            "bbox": None,
+            "tiles": None,
+            "thumbs": None,
+            "debug": debug
+        }
+
     ok, status = _try_init_ee(project)
     if not ok:
-        return SatelliteResult(
-            recent_window=[], baseline_window=[], ndvi_recent=None, ndvi_baseline=None,
-            ndvi_change=None, ndvi_anomaly=None, ndvi_timeseries=[],
-            landcover_recent=None, landcover_baseline=None, landcover_shift=None,
-            status=f"unavailable ({status[:120]})"
-        )
+        return error_response(f"Earth Engine unavailable: {status[:100]}")
 
     import ee
 
     try:
         point = ee.Geometry.Point(lon, lat)
         buffer = point.buffer(radius_m)
+        
+        # Calculate bbox for frontend
+        bounds = buffer.bounds().getInfo()
+        coords = bounds['coordinates'][0]
+        lons = [c[0] for c in coords]
+        lats = [c[1] for c in coords]
+        bbox = [min(lons), min(lats), max(lons), max(lats)]
 
         today = _dt.date.today()
         recent_end = today
@@ -52,146 +58,140 @@ def get_satellite_change(
         baseline_end = recent_end - _dt.timedelta(days=365)
         baseline_start = recent_start - _dt.timedelta(days=365)
 
-        recent_window = [recent_start.isoformat(), recent_end.isoformat()]
-        baseline_window = [baseline_start.isoformat(), baseline_end.isoformat()]
+        recent_window_strs = [recent_start.isoformat(), recent_end.isoformat()]
+        baseline_window_strs = [baseline_start.isoformat(), baseline_end.isoformat()]
 
-        # 1. NDVI (Sentinel-2)
-        def add_ndvi(img):
-            ndvi = img.normalizedDifference(["B8", "B4"]).rename("NDVI")
-            return img.addBands(ndvi).copyProperties(img, ["system:time_start"])
-
-        def get_ndvi_mean(start, end):
-            coll = (
-                ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
-                .filterBounds(buffer)
-                .filterDate(start.isoformat(), end.isoformat())
-                .filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", 30))
-                .map(add_ndvi)
-            )
-            val = coll.select("NDVI").mean().reduceRegion(
-                reducer=ee.Reducer.mean(),
-                geometry=buffer,
-                scale=10,
-                maxPixels=1e9
-            ).get("NDVI").getInfo()
-            return val
-
-        ndvi_recent = get_ndvi_mean(recent_start, recent_end)
-        ndvi_baseline = get_ndvi_mean(baseline_start, baseline_end)
-        
-        ndvi_change = None
-        ndvi_anomaly = None
-        if ndvi_recent is not None and ndvi_baseline is not None:
-            ndvi_change = ndvi_recent - ndvi_baseline
-            # Anomaly if change < -0.15 (loss) or > 0.15 (rapid growth)
-            ndvi_anomaly = abs(ndvi_change) > 0.15
-
-        # 2. NDVI Timeseries (Last 180 days)
-        ts_start = today - _dt.timedelta(days=180)
-        ts_coll = (
-            ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
-            .filterBounds(buffer)
-            .filterDate(ts_start.isoformat(), today.isoformat())
-            .filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", 30))
-            .map(add_ndvi)
-            .select("NDVI")
-        )
-        
-        # Aggregate by week to reduce points
-        # For simplicity in this script, we'll just take raw points and frontend can smooth, 
-        # or we return a simplified list. Let's return raw valid points.
-        def get_date_val(img):
-            date = img.date().format("YYYY-MM-dd")
-            val = img.reduceRegion(ee.Reducer.mean(), buffer, 10).get("NDVI")
-            return ee.Feature(None, {"date": date, "ndvi": val})
-
-        ts_list = ts_coll.map(get_date_val).filter(ee.Filter.notNull(["ndvi"])).getInfo()
-        ndvi_timeseries = [
-            {"date": f["properties"]["date"], "ndvi": f["properties"]["ndvi"]} 
-            for f in ts_list.get("features", [])
-        ]
-        ndvi_timeseries.sort(key=lambda x: x["date"])
-
-        # 3. Landcover (Dynamic World)
-        # Class names: 0=water, 1=trees, 2=grass, 3=flooded_vegetation, 4=crops, 
-        #              5=shrub_and_scrub, 6=built, 7=bare, 8=snow_and_ice
-        CLASS_NAMES = ["water", "trees", "grass", "flooded_vegetation", "crops", "shrub_and_scrub", "built", "bare", "snow_and_ice"]
-
-        def get_landcover_stats(start, end):
-            # Dynamic World V1
-            coll = (
-                ee.ImageCollection("GOOGLE/DYNAMICWORLD/V1")
-                .filterBounds(buffer)
-                .filterDate(start.isoformat(), end.isoformat())
-            )
-            # Use 'probability' bands. Compute mean probability for each class over the window.
-            # Bands are the class names directly? No, usually not in V1 collection directly, wait.
-            # Actually DW V1 images have bands matching class names? 
-            # Let's check docs assumption. Usually 'water', 'trees', etc. or a 'probs' band.
-            # Assuming 'water', 'trees', etc. exist as bands or we use 'label'.
-            # Better to use the probability bands if available.
-            # The collection has bands corresponding to class names in probability.
+        # --- Image Collections ---
+        def mask_clouds(img):
+            # Check if QA60 band exists
+            has_qa = img.bandNames().contains("QA60")
             
-            # Reduce over time (mean probability)
-            mean_img = coll.mean()
-            
-            # Reduce over region
-            stats = mean_img.reduceRegion(
-                reducer=ee.Reducer.mean(),
-                geometry=buffer,
-                scale=10,
-                maxPixels=1e9
-            ).getInfo()
-            
-            if not stats:
-                return None
-
-            # Filter only valid class names found in stats
-            probs = {k: v for k, v in stats.items() if k in CLASS_NAMES and v is not None}
-            if not probs:
-                return None
+            def apply_mask(i):
+                qa = i.select('QA60')
+                cloud_bit_mask = 1 << 10
+                cirrus_bit_mask = 1 << 11
+                mask = qa.bitwiseAnd(cloud_bit_mask).eq(0).And(qa.bitwiseAnd(cirrus_bit_mask).eq(0))
+                return i.updateMask(mask).divide(10000)
                 
-            # Normalize just in case
-            total = sum(probs.values())
-            if total > 0:
-                probs = {k: v / total for k, v in probs.items()}
-            
-            # Top 3
-            sorted_classes = sorted(probs.items(), key=lambda x: x[1], reverse=True)
-            top_classes = [k for k, v in sorted_classes[:3]]
-            
-            return {"class_probs": probs, "top_classes": top_classes}
+            # If QA60 exists, apply mask, else just scale
+            return ee.Algorithms.If(has_qa, apply_mask(img), img.divide(10000))
 
-        landcover_recent = get_landcover_stats(recent_start, recent_end)
-        landcover_baseline = get_landcover_stats(baseline_start, baseline_end)
+        # Relaxed cloud filter < 60
+        s2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED") \
+            .filterBounds(buffer) \
+            .filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", 60)) \
+            .map(mask_clouds)
+
+        recent_coll = s2.filterDate(recent_start.isoformat(), recent_end.isoformat())
+        baseline_coll = s2.filterDate(baseline_start.isoformat(), baseline_end.isoformat())
+
+        # Check counts
+        recent_count = recent_coll.size().getInfo()
+        baseline_count = baseline_coll.size().getInfo()
         
-        landcover_shift = 0.0
-        if landcover_recent and landcover_baseline:
-            # L1 distance
-            r_probs = landcover_recent["class_probs"]
-            b_probs = landcover_baseline["class_probs"]
-            all_keys = set(r_probs.keys()) | set(b_probs.keys())
-            diff = sum(abs(r_probs.get(k, 0) - b_probs.get(k, 0)) for k in all_keys)
-            landcover_shift = diff / 2.0  # Normalize 0..1
+        debug_info = {
+            "recent_count": recent_count,
+            "baseline_count": baseline_count,
+            "cloud_pct": 60
+        }
 
-        return SatelliteResult(
-            recent_window=recent_window,
-            baseline_window=baseline_window,
-            ndvi_recent=ndvi_recent,
-            ndvi_baseline=ndvi_baseline,
-            ndvi_change=ndvi_change,
-            ndvi_anomaly=ndvi_anomaly,
-            ndvi_timeseries=ndvi_timeseries,
-            landcover_recent=landcover_recent,
-            landcover_baseline=landcover_baseline,
-            landcover_shift=landcover_shift,
-            status="ok"
-        )
+        if recent_count == 0:
+            return error_response("No Sentinel-2 scenes found for recent window", debug_info)
+
+        # Fallback for baseline if empty
+        if baseline_count == 0:
+            # Try 2 years ago
+            baseline_start = baseline_start - _dt.timedelta(days=365)
+            baseline_end = baseline_end - _dt.timedelta(days=365)
+            baseline_window_strs = [baseline_start.isoformat(), baseline_end.isoformat()]
+            baseline_coll = s2.filterDate(baseline_start.isoformat(), baseline_end.isoformat())
+            baseline_count = baseline_coll.size().getInfo()
+            debug_info["baseline_count"] = baseline_count
+            debug_info["baseline_fallback"] = "2_years_ago"
+            
+            if baseline_count == 0:
+                # Still empty? We can proceed with recent data only, but can't compute change
+                pass
+
+        recent_img = recent_coll.median().clip(buffer)
+        
+        if baseline_count > 0:
+            baseline_img = baseline_coll.median().clip(buffer)
+        else:
+            baseline_img = None
+
+        # 1. NDVI Calculations
+        mean_reducer = ee.Reducer.mean()
+        
+        ndvi_recent_img = recent_img.normalizedDifference(["B8", "B4"]).rename("NDVI")
+        ndvi_recent_val = ndvi_recent_img.reduceRegion(mean_reducer, buffer, 10).get("NDVI").getInfo()
+        
+        ndvi_baseline_val = None
+        ndvi_change_val = None
+        ndvi_anomaly = None
+        
+        if baseline_img:
+            ndvi_baseline_img = baseline_img.normalizedDifference(["B8", "B4"]).rename("NDVI")
+            ndvi_baseline_val = ndvi_baseline_img.reduceRegion(mean_reducer, buffer, 10).get("NDVI").getInfo()
+            
+            if ndvi_recent_val is not None and ndvi_baseline_val is not None:
+                ndvi_change_val = ndvi_recent_val - ndvi_baseline_val
+                ndvi_anomaly = abs(ndvi_change_val) > 0.15
+
+        # 2. Visualizations & Tiles
+        tiles = {}
+        thumbs = {}
+
+        # A) True Color (RGB)
+        rgb_vis = {"min": 0, "max": 0.3, "bands": ["B4", "B3", "B2"], "gamma": 1.4}
+        # Explicit select + getMapId
+        try:
+            rgb_layer = recent_img.select(["B4", "B3", "B2"])
+            rgb_map = rgb_layer.getMapId(rgb_vis)
+            tiles["true_color"] = rgb_map["tile_fetcher"].url_format
+            
+            # Thumb
+            rgb_vis_img = recent_img.visualize(**rgb_vis)
+            thumbs["true_color"] = rgb_vis_img.getThumbURL({"region": buffer, "dimensions": 512, "format": "png"})
+        except Exception as e:
+            print(f"Error generating RGB tiles: {e}")
+
+        # B) NDVI
+        ndvi_vis = {"min": 0, "max": 1, "palette": ["#8b0000", "#ffcc00", "#00ff6a", "#007a3d"]}
+        try:
+            ndvi_vis_img = ndvi_recent_img.visualize(**ndvi_vis)
+            tiles["ndvi"] = ndvi_vis_img.getMapId()["tile_fetcher"].url_format
+            thumbs["ndvi"] = ndvi_vis_img.getThumbURL({"region": buffer, "dimensions": 512, "format": "png"})
+        except Exception as e:
+            print(f"Error generating NDVI tiles: {e}")
+
+        # C) NDVI Change
+        if baseline_img:
+            change_vis = {"min": -0.3, "max": 0.3, "palette": ["#b30000", "#ff9966", "#ffffff", "#99ff99", "#006d2c"]}
+            try:
+                change_img = ndvi_recent_img.subtract(ndvi_baseline_img).rename("NDVI_CHANGE")
+                change_vis_img = change_img.visualize(**change_vis)
+                tiles["ndvi_change"] = change_vis_img.getMapId()["tile_fetcher"].url_format
+                thumbs["ndvi_change"] = change_vis_img.getThumbURL({"region": buffer, "dimensions": 512, "format": "png"})
+            except Exception as e:
+                print(f"Error generating Change tiles: {e}")
+
+        return {
+            "ok": True,
+            "error": None,
+            "recent_window": recent_window_strs,
+            "baseline_window": baseline_window_strs,
+            "ndvi_recent": ndvi_recent_val,
+            "ndvi_baseline": ndvi_baseline_val,
+            "ndvi_change": ndvi_change_val,
+            "ndvi_anomaly": ndvi_anomaly,
+            "bbox": bbox,
+            "tiles": tiles,
+            "thumbs": thumbs,
+            "debug": debug_info
+        }
 
     except Exception as e:
-        return SatelliteResult(
-            recent_window=[], baseline_window=[], ndvi_recent=None, ndvi_baseline=None,
-            ndvi_change=None, ndvi_anomaly=None, ndvi_timeseries=[],
-            landcover_recent=None, landcover_baseline=None, landcover_shift=None,
-            status=f"error: {str(e)}"
-        )
+        import traceback
+        traceback.print_exc()
+        return error_response(f"Backend processing error: {str(e)}", {"trace": str(e)})

@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { AuthDebug } from "@/components/AuthDebug";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8000";
 
@@ -131,6 +132,9 @@ export function KnowledgeSidebar() {
                 </div>
               </div>
             </section>
+
+            {/* Auth Debug (Dev only) */}
+            <AuthDebug />
 
             {/* Recent Actions */}
             <section className="space-y-2">

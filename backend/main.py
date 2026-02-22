@@ -28,6 +28,8 @@ from backend.tasks import list_tasks, create_task, update_task
 from backend.alerts import send_agency_alert, get_playbook
 from backend.inat_routes import router as inat_router
 
+from datetime import datetime
+
 # Load env
 _env_dir = Path(__file__).resolve().parent
 load_dotenv(_env_dir / ".env")
@@ -35,9 +37,20 @@ load_dotenv(_env_dir / ".env.local")
 
 app = FastAPI(title="AlienBuster API", version="1.0.0")
 
+def _utcnow_iso():
+    return datetime.utcnow().isoformat()
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_origin_regex="https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -77,6 +90,17 @@ def check_model():
 @app.get("/health")
 def health():
     return {"status": "ok", "model": _MODEL_STATE}
+
+@app.get("/routes")
+def list_routes():
+    routes = []
+    for route in app.routes:
+        if hasattr(route, "methods"):
+            routes.append({
+                "path": route.path,
+                "methods": list(route.methods)
+            })
+    return routes
 
 @app.get("/api/health")
 def api_health():
@@ -134,10 +158,10 @@ async def identify(
         "ndvi": None
         if ndvi is None
         else {
-            "mean": ndvi.ndvi_recent,
-            "change": ndvi.ndvi_change,
-            "anomaly": ndvi.ndvi_anomaly,
-            "status": ndvi.status,
+            "mean": ndvi.get("ndvi_recent"),
+            "change": ndvi.get("ndvi_change"),
+            "anomaly": ndvi.get("ndvi_anomaly"),
+            "status": "ok" if ndvi.get("ok") else (ndvi.get("error") or "unavailable"),
         },
         "best": {
             "species": result.species,
@@ -180,11 +204,11 @@ def fuse(req: FuseRequest):
     sat = get_satellite_change(req.lat, req.lon, project=project)
     
     sat_score = 0.2
-    if sat.status == "ok":
+    if sat.get("ok"):
         # Anomaly => 0.8 base, + shift
-        base = 0.8 if sat.ndvi_anomaly else 0.2
-        shift = sat.landcover_shift or 0.0
-        sat_score = min(1.0, base + (shift * 0.5))
+        base = 0.8 if sat.get("ndvi_anomaly") else 0.2
+        # shift = sat.landcover_shift or 0.0  # Removed from backend
+        sat_score = min(1.0, base)
     
     res = calculate_risk(
         ml_confidence=req.ml_confidence,
@@ -218,10 +242,9 @@ def create_report(req: CreateReportRequest, background_tasks: BackgroundTasks):
     sat = get_satellite_change(req.lat, req.lon, project=project)
     
     sat_score = 0.2
-    if sat.status == "ok":
-        base = 0.8 if sat.ndvi_anomaly else 0.2
-        shift = sat.landcover_shift or 0.0
-        sat_score = min(1.0, base + (shift * 0.5))
+    if sat.get("ok"):
+        base = 0.8 if sat.get("ndvi_anomaly") else 0.2
+        sat_score = min(1.0, base)
         
     # 2. Density
     density = compute_report_density(req.lat, req.lon)
@@ -260,13 +283,13 @@ def create_report(req: CreateReportRequest, background_tasks: BackgroundTasks):
         topk=req.topk,
         
         # Satellite
-        ndvi_recent=sat.ndvi_recent,
-        ndvi_baseline=sat.ndvi_baseline,
-        ndvi_change=sat.ndvi_change,
-        ndvi_anomaly=sat.ndvi_anomaly,
-        landcover_recent=sat.landcover_recent,
-        landcover_baseline=sat.landcover_baseline,
-        landcover_shift=sat.landcover_shift,
+        ndvi_recent=sat.get("ndvi_recent"),
+        ndvi_baseline=sat.get("ndvi_baseline"),
+        ndvi_change=sat.get("ndvi_change"),
+        ndvi_anomaly=sat.get("ndvi_anomaly"),
+        landcover_recent=None,
+        landcover_baseline=None,
+        landcover_shift=None,
         
         # Fusion
         report_density=density.score,
