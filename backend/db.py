@@ -9,9 +9,21 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+# import supabase client for Postgres-backed mode
+from supabase import create_client
+
 
 _BACKEND_DIR = Path(__file__).resolve().parent
 _DEFAULT_DB = (_BACKEND_DIR / "data" / "alienbuster.db").resolve()
+
+# Determine whether to use Supabase instead of local SQLite
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+use_supabase = bool(SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)
+
+supabase: Optional[any] = None
+if use_supabase:
+    supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 
 def _db_path() -> Path:
@@ -22,6 +34,7 @@ def _db_path() -> Path:
 
 
 def get_conn() -> sqlite3.Connection:
+    # only used when not using Supabase
     db = _db_path()
     db.parent.mkdir(parents=True, exist_ok=True)
 
@@ -50,6 +63,10 @@ def _ensure_column(conn: sqlite3.Connection, table: str, col_sql: str) -> None:
 
 
 def init_db() -> None:
+    # when using Supabase we don't create a local SQLite schema
+    if use_supabase:
+        return
+
     conn = get_conn()
     try:
         conn.execute(
@@ -289,8 +306,18 @@ def _bounding_box(lat: float, lon: float, radius_km: float) -> Tuple[float, floa
     return lat - lat_delta, lat + lat_delta, lon - lon_delta, lon + lon_delta
 
 
-def _row_to_report_dict(row: sqlite3.Row) -> Dict[str, Any]:
-    d = dict(row)
+def _row_to_report_dict(row: Any) -> Dict[str, Any]:
+    # Accept either sqlite3.Row or plain dict (supabase result)
+    if isinstance(row, dict):
+        d = row.copy()
+    else:
+        d = dict(row)
+
+    # normalize lat/lon naming (supabase uses latitude/longitude)
+    if "latitude" in d and "lat" not in d:
+        d["lat"] = d.pop("latitude")
+    if "longitude" in d and "lon" not in d:
+        d["lon"] = d.pop("longitude")
 
     d["is_invasive"] = bool(d.get("is_invasive")) if d.get("is_invasive") is not None else None
     d["ndvi_anomaly"] = bool(d.get("ndvi_anomaly")) if d.get("ndvi_anomaly") is not None else None
@@ -337,31 +364,50 @@ def compute_report_density(
     cutoff = (datetime.utcnow() - timedelta(days=window_days)).replace(microsecond=0).isoformat() + "Z"
     min_lat, max_lat, min_lon, max_lon = _bounding_box(lat, lon, radius_km)
 
-    conn = get_conn()
-    try:
-        rows = conn.execute(
-            """
-            SELECT lat, lon
-            FROM reports
-            WHERE created_at >= ?
-              AND is_invasive = 1
-              AND lat BETWEEN ? AND ?
-              AND lon BETWEEN ? AND ?
-            """,
-            (cutoff, min_lat, max_lat, min_lon, max_lon),
-        ).fetchall()
-    finally:
-        conn.close()
+    rows: List[Dict[str, Any]]
+    if use_supabase:
+        # query supabase for invasive reports in bbox
+        resp = (
+            supabase
+            .table("reports")
+            .select("lat,longitude,is_invasive")
+            .gte("created_at", cutoff)
+            .eq("is_invasive", True)
+            .gte("latitude", min_lat)
+            .lte("latitude", max_lat)
+            .gte("longitude", min_lon)
+            .lte("longitude", max_lon)
+            .execute()
+        )
+        rows = resp.data or []
+    else:
+        conn = get_conn()
+        try:
+            rows = conn.execute(
+                """
+                SELECT lat, lon
+                FROM reports
+                WHERE created_at >= ?
+                  AND is_invasive = 1
+                  AND lat BETWEEN ? AND ?
+                  AND lon BETWEEN ? AND ?
+                """,
+                (cutoff, min_lat, max_lat, min_lon, max_lon),
+            ).fetchall()
+        finally:
+            conn.close()
 
     count = 0
     for r in rows:
         try:
-            if _haversine_km(lat, lon, float(r["lat"]), float(r["lon"])) <= radius_km:
+            # rows may be sqlite Row or dict
+            rlat = float(r.get("lat") or r.get("latitude"))
+            rlon = float(r.get("lon") or r.get("longitude"))
+            if _haversine_km(lat, lon, rlat, rlon) <= radius_km:
                 count += 1
         except Exception:
             continue
 
-    # Saturating mapping (0->0, 1->0.28, 3->0.63, 6->0.86 ...)
     score = 1.0 - math.exp(-count / 3.0)
     score = max(0.0, min(1.0, float(score)))
 
@@ -428,6 +474,19 @@ def compute_batch_density_and_risk(species: str, radius_km: float = 2.0) -> int:
 def insert_report(values: Dict[str, Any]) -> Dict[str, Any]:
     init_db()
 
+    if use_supabase:
+        # translate lat/lon into column names
+        body = values.copy()
+        if "lat" in body:
+            body["latitude"] = body.pop("lat")
+        if "lon" in body:
+            body["longitude"] = body.pop("lon")
+        resp = supabase.table("reports").insert(body).select("*").execute()
+        data = resp.data or []
+        if not data:
+            return {}
+        return _row_to_report_dict(data[0])
+
     conn = get_conn()
     try:
         cols = sorted(values.keys())
@@ -446,6 +505,10 @@ def insert_report(values: Dict[str, Any]) -> Dict[str, Any]:
 
 def get_report(report_id: int) -> Optional[Dict[str, Any]]:
     init_db()
+    if use_supabase:
+        resp = supabase.table("reports").select("*").eq("id", report_id).maybe_single().execute()
+        return _row_to_report_dict(resp.data) if resp.data else None
+
     conn = get_conn()
     try:
         row = conn.execute("SELECT * FROM reports WHERE id = ?", (int(report_id),)).fetchone()
@@ -467,28 +530,47 @@ def list_nearby_reports(
     cutoff = (datetime.utcnow() - timedelta(days=days)).replace(microsecond=0).isoformat() + "Z"
     min_lat, max_lat, min_lon, max_lon = _bounding_box(lat, lon, radius_km)
 
-    conn = get_conn()
-    try:
-        rows = conn.execute(
-            """
-            SELECT *
-            FROM reports
-            WHERE created_at >= ?
-              AND lat BETWEEN ? AND ?
-              AND lon BETWEEN ? AND ?
-            ORDER BY created_at DESC
-            LIMIT ?
-            """,
-            (cutoff, min_lat, max_lat, min_lon, max_lon, int(limit) * 4),
-        ).fetchall()
-    finally:
-        conn.close()
+    rows: List[Dict[str, Any]]
+    if use_supabase:
+        resp = (
+            supabase
+            .table("reports")
+            .select("*")
+            .gte("created_at", cutoff)
+            .gte("latitude", min_lat)
+            .lte("latitude", max_lat)
+            .gte("longitude", min_lon)
+            .lte("longitude", max_lon)
+            .order("created_at", desc=True)
+            .limit(int(limit) * 4)
+            .execute()
+        )
+        rows = resp.data or []
+    else:
+        conn = get_conn()
+        try:
+            rows = conn.execute(
+                """
+                SELECT *
+                FROM reports
+                WHERE created_at >= ?
+                  AND lat BETWEEN ? AND ?
+                  AND lon BETWEEN ? AND ?
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (cutoff, min_lat, max_lat, min_lon, max_lon, int(limit) * 4),
+            ).fetchall()
+        finally:
+            conn.close()
 
     # Exact filter + sort by distance
     out: List[Tuple[float, Dict[str, Any]]] = []
     for r in rows:
         try:
-            d_km = _haversine_km(lat, lon, float(r["lat"]), float(r["lon"]))
+            rlat = float(r.get("lat") or r.get("latitude"))
+            rlon = float(r.get("lon") or r.get("longitude"))
+            d_km = _haversine_km(lat, lon, rlat, rlon)
         except Exception:
             continue
         if d_km <= radius_km:
@@ -500,6 +582,19 @@ def list_nearby_reports(
 
 def list_user_reports(user_id: str, limit: int = 100) -> List[Dict[str, Any]]:
     init_db()
+    if use_supabase:
+        resp = (
+            supabase
+            .table("reports")
+            .select("*")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        rows = resp.data or []
+        return [_row_to_report_dict(r) for r in rows]
+
     conn = get_conn()
     try:
         rows = conn.execute(
@@ -512,6 +607,25 @@ def list_user_reports(user_id: str, limit: int = 100) -> List[Dict[str, Any]]:
 
 def list_review_queue(*, high_risk_threshold: float = 0.85, limit: int = 100) -> List[Dict[str, Any]]:
     init_db()
+
+    if use_supabase:
+        # Supabase doesn't do OR easily, use filter chaining with or_ macro via rpc would be better but fetch and filter in python
+        resp = (
+            supabase
+            .table("reports")
+            .select("*")
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        rows = resp.data or []
+        out: List[Dict[str, Any]] = []
+        for r in rows:
+            st = r.get("status")
+            fr = r.get("fused_risk")
+            if st == "pending_review" or (st == "unverified" and fr is not None and float(fr) >= high_risk_threshold):
+                out.append(r)
+        return [_row_to_report_dict(r) for r in out[:limit]]
 
     conn = get_conn()
     try:
@@ -542,6 +656,19 @@ def record_validation(
 ) -> None:
     init_db()
 
+    payload = {
+        "created_at": _utcnow_iso(),
+        "report_id": report_id,
+        "expert_email": expert_email,
+        "reviewer": expert_email,
+        "decision": decision,
+        "confidence": confidence,
+        "notes": notes,
+    }
+    if use_supabase:
+        supabase.table("validations").insert(payload).execute()
+        return
+
     conn = get_conn()
     try:
         conn.execute(
@@ -555,6 +682,16 @@ def record_validation(
 
 def update_report_status(report_id: int, status: str) -> Optional[Dict[str, Any]]:
     init_db()
+    if use_supabase:
+        resp = (
+            supabase.table("reports")
+            .update({"status": status})
+            .eq("id", report_id)
+            .select("*")
+            .maybe_single()
+            .execute()
+        )
+        return _row_to_report_dict(resp.data) if resp.data else None
 
     conn = get_conn()
     try:
