@@ -28,6 +28,7 @@ from backend.db import (
     record_validation,
     update_report_status,
     utcnow_report_values,
+    use_supabase,
 )
 from backend.models import (
     AlertPreviewResponse,
@@ -268,7 +269,7 @@ def _classify_image(image: Image.Image) -> Tuple[str, float, str]:
 
 @app.get("/health")
 def health():
-    return {"ok": True, "device": _get_device(), "db": "sqlite", "version": app.version}
+    return {"ok": True, "device": _get_device(), "db": "supabase" if use_supabase else "sqlite", "version": app.version}
 
 
 @app.post("/detect", response_model=DetectResponse)

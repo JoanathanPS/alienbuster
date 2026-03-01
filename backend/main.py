@@ -20,7 +20,7 @@ from backend.exif_utils import extract_gps_from_image, fetch_species_info
 from backend.db import (
     init_db, insert_report, get_report, list_nearby_reports, compute_report_density,
     list_review_queue, record_validation, update_report_status,
-    utcnow_report_values, list_user_reports
+    utcnow_report_values, list_user_reports, use_supabase
 )
 from backend.fusion import calculate_risk
 from backend.outbreaks import recompute_outbreaks, list_outbreaks
@@ -89,7 +89,7 @@ def check_model():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "model": _MODEL_STATE}
+    return {"status": "ok", "model": _MODEL_STATE, "db": "supabase" if use_supabase else "sqlite"}
 
 @app.get("/routes")
 def list_routes():
