@@ -15,7 +15,7 @@ export function AppHeader({ onOpenCommandPalette }: { onOpenCommandPalette?: () 
     <header className="sticky top-0 z-50 border-b border-white/10 bg-black/40 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-[1440px] items-center px-4 md:px-6">
         <div className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4">
-          
+
           {/* Left: Brand */}
           <div className="flex items-center gap-3 min-w-0">
             <button
@@ -72,49 +72,22 @@ export function AppHeader({ onOpenCommandPalette }: { onOpenCommandPalette?: () 
               </kbd>
             </Button>
 
-            {session ? (
-              <>
-                <Button
-                  size="sm"
-                  className="hidden h-10 gap-2 bg-primary/90 px-4 text-primary-foreground hover:bg-primary sm:inline-flex"
-                  onClick={() => navigate("/submit")}
-                >
-                  <Plus className="h-4 w-4" />
-                  New Report
-                </Button>
-                
-                <div className="mx-1 hidden h-6 w-px bg-white/10 md:block" />
+            <Button
+              size="sm"
+              className="hidden h-10 gap-2 bg-primary/90 px-4 text-primary-foreground hover:bg-primary sm:inline-flex"
+              onClick={() => navigate("/submit")}
+            >
+              <Plus className="h-4 w-4" />
+              New Report
+            </Button>
 
-                <div className="flex items-center gap-2">
-                  <span className="hidden max-w-[140px] truncate text-xs font-medium text-muted-foreground lg:inline-block">
-                    {user?.email}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-10 gap-2 px-2 text-muted-foreground hover:bg-white/5 hover:text-foreground"
-                    onClick={async () => {
-                      // signOut handles redirect and state clearing
-                      await signOut();
-                    }}
-                    aria-label="Logout"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    <span className="hidden lg:inline">Sign out</span>
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <Button
-                variant="secondary"
-                size="sm"
-                className="h-10 gap-2 px-4 font-medium"
-                onClick={() => navigate("/login")}
-              >
-                <LogIn className="h-4 w-4" />
-                Sign in
-              </Button>
-            )}
+            <div className="mx-1 hidden h-6 w-px bg-white/10 md:block" />
+
+            <div className="flex items-center gap-2">
+              <span className="hidden max-w-[140px] truncate text-xs font-medium text-muted-foreground lg:inline-block">
+                {user?.email}
+              </span>
+            </div>
           </div>
 
         </div>

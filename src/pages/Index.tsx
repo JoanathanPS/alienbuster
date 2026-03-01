@@ -38,7 +38,6 @@ const Index = () => {
 
   useEffect(() => {
     const load = async () => {
-      if (!user) return;
 
       const start = new Date();
       start.setHours(0, 0, 0, 0);
@@ -94,7 +93,7 @@ const Index = () => {
       className="max-w-[1280px]"
     >
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8">
-        
+
         {/* Top Hero Section */}
         <div className="col-span-12 lg:col-span-8 flex flex-col h-full">
           <Card className="h-full overflow-hidden border-white/10 bg-card/35 p-6 md:p-8 flex flex-col justify-center">
@@ -102,14 +101,14 @@ const Index = () => {
               <Radar className="h-4 w-4 text-primary" />
               <span>Detect 6–12 months earlier than traditional surveys</span>
             </div>
-            
+
             <h2 className="text-4xl font-semibold tracking-tight md:text-5xl leading-tight mb-4">
               Calm signals. <br />
               <span className="text-primary">Fast response.</span>
             </h2>
-            
+
             <p className="max-w-xl text-base text-muted-foreground mb-8 leading-relaxed">
-              A nature-forward operations console for invasive species: fuse BioCLIP predictions, 
+              A nature-forward operations console for invasive species: fuse BioCLIP predictions,
               satellite change, and clustered field reports into explainable risk.
             </p>
 
@@ -142,23 +141,23 @@ const Index = () => {
             <StatTile
               label="Reports today"
               value={reportsToday == null ? "—" : String(reportsToday)}
-              sub={user ? "Supabase" : "Sign in"}
+              sub="Supabase"
               accent="river"
               className="h-full"
             />
             <StatTile
               label="Pending review"
               value={pendingReviews == null ? "—" : String(pendingReviews)}
-              sub={user ? "Queue" : "Sign in"}
+              sub="Queue"
               accent="leaf"
               className="h-full"
             />
           </div>
           <div className="flex-1">
-             <StatTile label="Active outbreaks" value="—" sub="Local clustering" accent="leaf" className="h-full" />
+            <StatTile label="Active outbreaks" value="—" sub="Local clustering" accent="leaf" className="h-full" />
           </div>
           <div className="flex-1">
-             <StatTile label="Alerts sent" value="—" sub="SMTP (optional)" accent="sun" className="h-full" />
+            <StatTile label="Alerts sent" value="—" sub="SMTP (optional)" accent="sun" className="h-full" />
           </div>
         </div>
 
@@ -176,12 +175,12 @@ const Index = () => {
               ]}
             />
           </div>
-          
+
           <Card className="border-white/10 bg-card/25 overflow-hidden">
             <CardHeader className="pb-2 border-b border-white/5">
               <CardTitle className="flex items-center justify-between text-base font-medium">
                 <span className="flex items-center gap-2">
-                  <Radar className="h-4 w-4 text-primary" /> 
+                  <Radar className="h-4 w-4 text-primary" />
                   Live preview
                 </span>
                 <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => navigate("/hotspots")}>
@@ -191,11 +190,11 @@ const Index = () => {
             </CardHeader>
             <CardContent className="p-0 h-[400px]">
               <div className="h-full w-full">
-                <GeoMap 
-                   height="100%" 
-                   showReports={mapLayer === "reports"} 
-                   showOutbreaks={mapLayer === "outbreaks"}
-                   compact={true}
+                <GeoMap
+                  height="100%"
+                  showReports={mapLayer === "reports"}
+                  showOutbreaks={mapLayer === "outbreaks"}
+                  compact={true}
                 />
               </div>
             </CardContent>
@@ -231,7 +230,7 @@ const Index = () => {
             </CardHeader>
             <CardContent className="flex-1 flex flex-col text-sm text-muted-foreground">
               <p className="mb-6 leading-relaxed">
-                Rapid-response alert history. View agency templates, sent timestamps, and 
+                Rapid-response alert history. View agency templates, sent timestamps, and
                 recipient engagement stats for high-priority outbreaks.
               </p>
               <Button variant="outline" className="mt-auto w-full" onClick={() => navigate("/response")}>
