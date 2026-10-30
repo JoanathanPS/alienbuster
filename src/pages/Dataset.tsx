@@ -5,9 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { Link } from "react-router-dom";
 import { Progress } from "@/components/ui/progress";
+import { Page } from "@/components/Page";
 
 type IngestStage = "start" | "resolving_taxon" | "resolving_place" | "fetching" | "inserted" | "recompute_outbreaks" | "done" | "error";
 
@@ -108,14 +109,16 @@ export default function DatasetPage() {
   };
 
   return (
-    <div className="container mx-auto p-4 space-y-8 pb-20">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight">Dataset Ingestion</h1>
-        <p className="text-muted-foreground">
-          Populate the database with real-world observations from iNaturalist.
-        </p>
-      </div>
-
+    <Page
+      title={
+        <div className="flex items-center gap-2">
+          <Database className="h-5 w-5 text-primary" aria-hidden="true" />
+          Dataset Ingestion
+        </div>
+      }
+      description="Populate the database with real-world observations from iNaturalist."
+      className="max-w-5xl"
+    >
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
@@ -297,6 +300,6 @@ export default function DatasetPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </Page>
   );
 }

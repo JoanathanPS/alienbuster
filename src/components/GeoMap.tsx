@@ -227,80 +227,86 @@ export function GeoMap({
               {selectedItem?.type === "outbreak" ? "Outbreak Details" : "Report Details"}
             </DrawerTitle>
             <DrawerDescription>
-              {loadingDetails ? (
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Loading...
-                </div>
-              ) : details ? (
-                <div className="space-y-4 mt-4 text-left">
-                  {selectedItem?.type === "outbreak" ? (
-                    <>
-                      <div className="flex justify-between items-center">
-                        <span className="text-lg font-bold">{details.species} Cluster</span>
-                        <Badge variant={details.mean_risk > 0.7 ? "destructive" : "default"}>
-                          Risk: {(details.mean_risk * 100).toFixed(0)}%
-                        </Badge>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="text-muted-foreground">Reports:</span> {details.num_reports}
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Radius:</span> {details.radius_km.toFixed(1)} km
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Status:</span> {details.status}
-                        </div>
-                      </div>
-                      
-                      {details.related_reports && (
-                         <div className="mt-4">
-                           <h4 className="font-medium mb-2">Recent Reports in Cluster</h4>
-                           <div className="max-h-40 overflow-y-auto space-y-2">
-                             {details.related_reports.map((r: any) => (
-                               <div key={r.id} className="text-xs p-2 border rounded bg-secondary/50 flex justify-between">
-                                 <span>{new Date(r.created_at).toLocaleDateString()}</span>
-                                 <span>Risk: {r.fused_risk.toFixed(2)}</span>
-                               </div>
-                             ))}
-                           </div>
-                         </div>
-                      )}
-
-                      <DrawerFooter className="px-0">
-                         <Button>Create Response Task</Button>
-                         <Button variant="outline">Send Alert</Button>
-                      </DrawerFooter>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex justify-between items-center">
-                        <span className="text-lg font-bold">{details.species}</span>
-                        <Badge variant={details.fused_risk > 0.7 ? "destructive" : "default"}>
-                          Risk: {(details.fused_risk * 100).toFixed(0)}%
-                        </Badge>
-                      </div>
-                      
-                      {details.photo_url && (
-                        <img src={details.photo_url} alt="Report" className="h-40 w-full object-cover rounded-md" />
-                      )}
-
-                      <div className="text-sm space-y-1">
-                        <div><span className="text-muted-foreground">Confidence:</span> {details.ml_confidence?.toFixed(2)}</div>
-                        <div><span className="text-muted-foreground">Density Score:</span> {details.report_density?.toFixed(2)}</div>
-                        <div><span className="text-muted-foreground">Location:</span> {details.lat.toFixed(4)}, {details.lon.toFixed(4)}</div>
-                      </div>
-
-                      <DrawerFooter className="px-0">
-                         <Button>Verify Report</Button>
-                         <Button variant="outline">Flag as False Positive</Button>
-                      </DrawerFooter>
-                    </>
-                  )}
-                </div>
-              ) : "No details found."}
+              {selectedItem?.type === "outbreak" ? "Regional cluster analysis and active threat metrics." : "Individual field observation telemetry."}
             </DrawerDescription>
           </DrawerHeader>
+
+          <div className="px-4 pb-6">
+            {loadingDetails ? (
+              <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin text-primary" /> Loading telemetry...
+              </div>
+            ) : details ? (
+              <div className="space-y-4 text-left">
+                {selectedItem?.type === "outbreak" ? (
+                  <>
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-bold">{details.species} Cluster</span>
+                      <Badge variant={details.mean_risk > 0.7 ? "destructive" : "default"}>
+                        Risk: {(details.mean_risk * 100).toFixed(0)}%
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Reports:</span> {details.num_reports}
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Radius:</span> {details.radius_km.toFixed(1)} km
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Status:</span> {details.status}
+                      </div>
+                    </div>
+                    
+                    {details.related_reports && (
+                       <div className="mt-4">
+                         <h4 className="font-medium mb-2 text-sm">Recent Reports in Cluster</h4>
+                         <div className="max-h-40 overflow-y-auto space-y-2">
+                           {details.related_reports.map((r: any) => (
+                             <div key={r.id} className="text-xs p-2.5 border rounded-lg bg-card/60 flex justify-between">
+                               <span>{new Date(r.created_at).toLocaleDateString()}</span>
+                               <span className="font-medium text-foreground">Risk: {r.fused_risk.toFixed(2)}</span>
+                             </div>
+                           ))}
+                         </div>
+                       </div>
+                    )}
+
+                    <DrawerFooter className="px-0 pt-4">
+                       <Button className="w-full">Create Response Task</Button>
+                       <Button variant="outline" className="w-full">Send Alert</Button>
+                    </DrawerFooter>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-bold">{details.species || "Unidentified"}</span>
+                      <Badge variant={details.fused_risk > 0.7 ? "destructive" : "default"}>
+                        Risk: {(details.fused_risk * 100).toFixed(0)}%
+                      </Badge>
+                    </div>
+                    
+                    {details.photo_url && (
+                      <img src={details.photo_url} alt="Report observation" className="h-44 w-full object-cover rounded-lg border border-border" />
+                    )}
+
+                    <div className="text-sm space-y-1.5 rounded-lg border border-border bg-card/40 p-3">
+                      <div><span className="text-muted-foreground">Confidence:</span> {details.ml_confidence?.toFixed(2) ?? "—"}</div>
+                      <div><span className="text-muted-foreground">Density Score:</span> {details.report_density?.toFixed(2) ?? "—"}</div>
+                      <div><span className="text-muted-foreground">Location:</span> {details.lat?.toFixed(4)}, {details.lon?.toFixed(4)}</div>
+                    </div>
+
+                    <DrawerFooter className="px-0 pt-4">
+                       <Button className="w-full">Verify Report</Button>
+                       <Button variant="outline" className="w-full">Flag as False Positive</Button>
+                    </DrawerFooter>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="py-6 text-center text-sm text-muted-foreground">No details found.</div>
+            )}
+          </div>
         </DrawerContent>
       </Drawer>
     </>

@@ -59,3 +59,7 @@ backend/models/
 # Warp local state
 .prompt/
 .qodo/
+
+# Playwright
+test-results/
+playwright-report/

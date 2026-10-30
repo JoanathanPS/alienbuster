@@ -68,7 +68,7 @@ const AdminReview = () => {
 
   if (authLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-[300px] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -76,10 +76,10 @@ const AdminReview = () => {
 
   if (!isExpert) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center px-4">
+      <div className="flex min-h-[300px] flex-col items-center justify-center px-4">
         <ShieldX className="mb-4 h-16 w-16 text-destructive" />
         <h2 className="mb-2 text-2xl font-bold text-foreground">Access Denied</h2>
-        <p className="text-center text-muted-foreground">Only expert users can access the Expert Review page.</p>
+        <p className="text-center text-muted-foreground">Only authorized ecological experts can access this review queue.</p>
         <p className="mt-2 text-center text-xs text-muted-foreground">
           Allowlist: {EXPERT_EMAILS.join(", ")}
         </p>

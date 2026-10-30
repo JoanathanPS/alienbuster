@@ -16,10 +16,10 @@ export function StatTile({
   trend?: Array<number | null>;
   className?: string;
 }) {
-  const glow = accent === "river" ? "ab-glow-river" : accent === "sun" ? "" : "ab-glow-leaf";
+  const glow = accent === "river" ? "ab-glow-river" : accent === "sun" ? "ab-glow-sun" : "ab-glow-leaf";
 
   return (
-    <div className={cn("rounded-2xl border border-white/10 bg-card/35 p-4 backdrop-blur-xl", glow, className)}>
+    <div className={cn("rounded-2xl border border-border bg-card/60 p-4 backdrop-blur-xl transition-colors hover:bg-card/80", glow, className)}>
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="mt-2 flex items-end justify-between gap-3">
         <div>

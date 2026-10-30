@@ -368,7 +368,7 @@ export default function ExpertReview() {
         setActionPending(null);
       }
     },
-    [user?.email, notesById, reports],
+    [user?.email, notesById],
   );
 
   const counts = useMemo(() => ({ total: reports.length, filtered: filtered.length }), [reports.length, filtered.length]);

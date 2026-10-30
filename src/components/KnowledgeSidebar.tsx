@@ -134,7 +134,7 @@ export function KnowledgeSidebar() {
             </section>
 
             {/* Auth Debug (Dev only) */}
-            <AuthDebug />
+            {import.meta.env.DEV && <AuthDebug />}
 
             {/* Recent Actions */}
             <section className="space-y-2">
@@ -183,7 +183,7 @@ export function KnowledgeSidebar() {
                   <p className="mt-1 pl-2">Combination of ML confidence, satellite anomalies, and report density.</p>
                 </details>
                 <details>
-                  <summary className="cursor-pointer font-medium text-foreground">How does satellite works?</summary>
+                  <summary className="cursor-pointer font-medium text-foreground">How does satellite analysis work?</summary>
                   <p className="mt-1 pl-2">We analyze Sentinel-2 imagery for vegetation changes (NDVI) compared to 1 year ago.</p>
                 </details>
               </TabsContent>

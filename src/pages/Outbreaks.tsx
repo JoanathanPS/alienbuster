@@ -25,8 +25,8 @@ export default function Outbreaks() {
       </div>
 
       <div className="grid gap-3 md:grid-cols-1">
-        <Card className="overflow-hidden border-white/10 bg-card/25">
-          <CardHeader className="pb-3 border-b border-white/5">
+        <Card className="overflow-hidden border-border bg-card/60 backdrop-blur-xl">
+          <CardHeader className="pb-3 border-b border-border/60">
             <CardTitle className="flex items-center gap-2 text-base">
               <MapPin className="h-4 w-4 text-primary" /> Outbreak map
             </CardTitle>

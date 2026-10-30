@@ -125,7 +125,7 @@ export default function Login() {
                 <Bug className="h-4 w-4" aria-hidden="true" />
               </span>
               <div>
-                <CardTitle className="text-xl">Alien Buster</CardTitle>
+                <CardTitle className="text-xl">AlienBuster</CardTitle>
                 <CardDescription>Sign in to submit reports and view hotspots.</CardDescription>
               </div>
             </div>

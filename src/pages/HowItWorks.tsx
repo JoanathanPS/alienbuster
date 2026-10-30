@@ -1,72 +1,106 @@
-import { Camera, MapPin, Send, Search } from "lucide-react";
+import { Camera, MapPin, Send, Cpu, Info } from "lucide-react";
+import { Page } from "@/components/Page";
+import { Card, CardContent } from "@/components/ui/card";
 
 const steps = [
-  { icon: Camera, title: "1. Spot & Snap", desc: "See something unusual? Take a photo using the app's camera." },
-  { icon: MapPin, title: "2. Tag Location", desc: "Your GPS coordinates are captured automatically for precise tracking." },
-  { icon: Send, title: "3. Submit Report", desc: "Add a description and submit. Your report is saved to our database." },
-  { icon: Search, title: "4. AI Analysis (Coming Soon)", desc: "Our BioCLIP-powered AI will analyze photos to identify invasive species." },
+  {
+    icon: Camera,
+    title: "1. Spot & Snap",
+    desc: "Observe a suspicious plant or animal in the wild. Capture a clear photo directly through the app or upload from your gallery.",
+  },
+  {
+    icon: MapPin,
+    title: "2. Automatic Telemetry & GPS",
+    desc: "EXIF metadata and your device geolocation are extracted automatically to anchor the sighting to exact spatial coordinates.",
+  },
+  {
+    icon: Cpu,
+    title: "3. BioCLIP AI Multimodal Vision",
+    desc: "Our BioCLIP neural classifier processes the sighting against known invasive taxonomy, evaluating biological features in real time.",
+  },
+  {
+    icon: Send,
+    title: "4. Satellite Correlation & Response",
+    desc: "Sightings fuse with Sentinel-2 NDVI satellite change detection to score regional threat levels and notify conservation authorities.",
+  },
 ];
 
 const exampleSpecies = [
   {
-    name: "Kudzu Vine",
-    desc: "A fast-growing vine from Japan that smothers native vegetation across the southeastern US.",
+    name: "Kudzu Vine (Pueraria montana)",
+    desc: "Aggressive perennial vine native to East Asia. Smothers forest canopies, outcompeting native flora and destabilizing local biodiversity.",
     image: "https://images.unsplash.com/photo-1592982537447-6f2a6a78b6d9?w=800",
   },
   {
-    name: "Burmese Python",
-    desc: "Non-native constrictor threatening native wildlife in Florida's Everglades.",
+    name: "Burmese Python (Python bivittatus)",
+    desc: "Apex predator native to Southeast Asia, now severely impacting marsh rabbits, wading birds, and deer across wetland ecosystems.",
     image: "https://images.unsplash.com/photo-1612682415667-6c5d8b8a7d6d?w=800",
   },
   {
-    name: "Lionfish",
-    desc: "Venomous Indo-Pacific fish invading Atlantic and Caribbean reefs, devastating local fish populations.",
+    name: "Red Lionfish (Pterois volitans)",
+    desc: "Venomous Indo-Pacific predatory fish invading Atlantic and Caribbean reefs, depleting over 80% of juvenile native fish populations.",
     image: "https://images.unsplash.com/photo-1560264280-88b68371db39?w=800",
   },
 ];
 
 const HowItWorks = () => {
   return (
-    <div className="mx-auto max-w-lg px-4 pb-24 pt-6">
-      <h2 className="mb-2 text-xl font-bold text-foreground">How It Works</h2>
-      <p className="mb-6 text-sm text-muted-foreground">
-        Alien Buster empowers citizens to report invasive species sightings, helping scientists protect local ecosystems.
-      </p>
+    <Page
+      title={
+        <div className="flex items-center gap-2">
+          <Info className="h-5 w-5 text-primary" aria-hidden="true" />
+          How AlienBuster Works
+        </div>
+      }
+      description="Crowdsourced ecological field reports fused with satellite remote sensing and BioCLIP machine learning."
+      className="max-w-4xl"
+    >
+      <div className="space-y-8">
+        {/* Step Progression Grid */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          {steps.map((step) => (
+            <Card key={step.title} className="border-border bg-card/60 backdrop-blur-sm transition-all hover:bg-card">
+              <CardContent className="flex items-start gap-3.5 p-5">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary ab-glow-leaf">
+                  <step.icon className="h-5 w-5" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-sm font-semibold tracking-tight text-foreground">{step.title}</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{step.desc}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
-      {/* Steps */}
-      <div className="mb-8 space-y-4">
-        {steps.map((step) => (
-          <div key={step.title} className="flex items-start gap-3 rounded-xl border border-border bg-card p-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-              <step.icon className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground">{step.title}</p>
-              <p className="text-xs text-muted-foreground">{step.desc}</p>
-            </div>
+        {/* Example Species Showcase */}
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold tracking-tight text-foreground">Priority Bio-Threat Species</h2>
+            <p className="text-xs text-muted-foreground">Examples of high-risk invasive flora and fauna monitored by the system.</p>
           </div>
-        ))}
-      </div>
 
-      {/* Example species */}
-      <h3 className="mb-3 text-lg font-bold text-foreground">Common Invasive Species</h3>
-      <div className="space-y-4">
-        {exampleSpecies.map((s) => (
-          <div key={s.name} className="overflow-hidden rounded-xl border border-border bg-card">
-            <img
-              src={s.image}
-              alt={s.name}
-              className="aspect-square w-full object-cover"
-              loading="lazy"
-            />
-            <div className="p-4">
-              <p className="text-sm font-semibold text-foreground">{s.name}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{s.desc}</p>
-            </div>
+          <div className="grid gap-5 sm:grid-cols-3">
+            {exampleSpecies.map((s) => (
+              <Card key={s.name} className="overflow-hidden border-border bg-card/60 transition-all hover:bg-card">
+                <div className="aspect-[16/10] w-full overflow-hidden bg-muted">
+                  <img
+                    src={s.image}
+                    alt={s.name}
+                    className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
+                    loading="lazy"
+                  />
+                </div>
+                <CardContent className="p-4 space-y-1.5">
+                  <h4 className="text-sm font-semibold text-foreground">{s.name}</h4>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{s.desc}</p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        ))}
+        </div>
       </div>
-    </div>
+    </Page>
   );
 };
 

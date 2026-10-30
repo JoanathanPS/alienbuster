@@ -140,6 +140,7 @@ export function PhotoInput({ onPhotoReady, onClose }: PhotoInputProps) {
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        aria-label="Upload species photo from device"
         className="hidden"
         onChange={handleFileChange}
       />

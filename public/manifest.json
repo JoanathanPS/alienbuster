@@ -1,16 +1,16 @@
 {
-  "name": "Sentinel Species",
-  "short_name": "Sentinel",
-  "description": "Invasive species reporting and response system",
+  "name": "AlienBuster",
+  "short_name": "AlienBuster",
+  "description": "Invasive species early warning system and nature-forward operations console",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#09090b",
-  "theme_color": "#09090b",
+  "background_color": "#090d16",
+  "theme_color": "#090d16",
   "icons": [
     {
-      "src": "/favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
     },
     {
       "src": "/icon-192.png",

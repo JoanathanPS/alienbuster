@@ -21,6 +21,7 @@ const Index = () => {
 
   const [reportsToday, setReportsToday] = useState<number | null>(null);
   const [pendingReviews, setPendingReviews] = useState<number | null>(null);
+  const [activeOutbreaks, setActiveOutbreaks] = useState<number | null>(null);
 
   const [mapLayer, setMapLayer] = useState<"reports" | "outbreaks" | "anomalies">("reports");
 
@@ -55,6 +56,13 @@ const Index = () => {
 
       setReportsToday(todayRes.count ?? 0);
       setPendingReviews(pendingRes.count ?? 0);
+
+      try {
+        const ob = await supabase.from("outbreaks").select("id", { count: "exact", head: true });
+        setActiveOutbreaks(ob.count ?? 0);
+      } catch {
+        setActiveOutbreaks(0);
+      }
     };
 
     load();
@@ -96,13 +104,13 @@ const Index = () => {
 
         {/* Top Hero Section */}
         <div className="col-span-12 lg:col-span-8 flex flex-col h-full">
-          <Card className="h-full overflow-hidden border-white/10 bg-card/35 p-6 md:p-8 flex flex-col justify-center">
+          <Card className="h-full overflow-hidden border-border bg-card/60 p-6 md:p-8 flex flex-col justify-center backdrop-blur-xl">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
               <Radar className="h-4 w-4 text-primary" />
               <span>Detect 6–12 months earlier than traditional surveys</span>
             </div>
 
-            <h2 className="text-4xl font-semibold tracking-tight md:text-5xl leading-tight mb-4">
+            <h2 className="text-4xl font-semibold tracking-tight md:text-5xl leading-tight mb-4 text-foreground">
               Calm signals. <br />
               <span className="text-primary">Fast response.</span>
             </h2>
@@ -115,7 +123,7 @@ const Index = () => {
             <div className="flex flex-col sm:flex-row gap-3">
               <Button
                 size="lg"
-                className="h-12 px-6 bg-accent text-accent-foreground hover:bg-accent/90 text-base"
+                className="h-12 px-6 bg-primary text-primary-foreground hover:bg-primary/90 text-base font-medium"
                 onClick={() => {
                   logAction({ title: "Start new report" });
                   setShowPhotoInput(true);
@@ -126,7 +134,7 @@ const Index = () => {
               <Button
                 size="lg"
                 variant="outline"
-                className="h-12 px-6 text-base"
+                className="h-12 px-6 text-base border-border bg-card/60 hover:bg-card"
                 onClick={() => navigate("/how-it-works")}
               >
                 Learn the workflow
@@ -141,23 +149,35 @@ const Index = () => {
             <StatTile
               label="Reports today"
               value={reportsToday == null ? "—" : String(reportsToday)}
-              sub="Supabase"
+              sub="Live database"
               accent="river"
               className="h-full"
             />
             <StatTile
               label="Pending review"
               value={pendingReviews == null ? "—" : String(pendingReviews)}
-              sub="Queue"
+              sub="Triage queue"
               accent="leaf"
               className="h-full"
             />
           </div>
           <div className="flex-1">
-            <StatTile label="Active outbreaks" value="—" sub="Local clustering" accent="leaf" className="h-full" />
+            <StatTile
+              label="Active outbreaks"
+              value={activeOutbreaks == null ? "0" : String(activeOutbreaks)}
+              sub="Clustered sectors"
+              accent="leaf"
+              className="h-full"
+            />
           </div>
           <div className="flex-1">
-            <StatTile label="Alerts sent" value="—" sub="SMTP (optional)" accent="sun" className="h-full" />
+            <StatTile
+              label="Early detection lead"
+              value="6–12 mo"
+              sub="Pre-survey warning"
+              accent="sun"
+              className="h-full"
+            />
           </div>
         </div>
 

@@ -31,7 +31,6 @@ import ResponseCenter from "./pages/ResponseCenter";
 import Outbreaks from "./pages/Outbreaks";
 
 import DatasetPage from "./pages/Dataset";
-import FontPreview from "./pages/FontPreview";
 
 const queryClient = new QueryClient();
 
@@ -90,7 +89,6 @@ function AppRoutes() {
         <Route path="/response" element={<ProtectedRoute><Scene><ResponseCenter /></Scene></ProtectedRoute>} />
         <Route path="/outbreaks" element={<ProtectedRoute><Scene><Outbreaks /></Scene></ProtectedRoute>} />
         <Route path="/dataset" element={<ProtectedRoute><Scene><DatasetPage /></Scene></ProtectedRoute>} />
-        <Route path="/font-preview" element={<Scene><FontPreview /></Scene>} />
 
         <Route path="/admin-review" element={<ProtectedRoute><Scene><AdminReview /></Scene></ProtectedRoute>} />
         <Route path="*" element={<Scene><NotFound /></Scene>} />

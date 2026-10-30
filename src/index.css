@@ -9,122 +9,112 @@
     --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
 
     /* ------------------------------------------------------------
-       Nature-forward premium tokens (requested)
+       Hedgerow Botanical Palette (Light Paper Mode)
        ------------------------------------------------------------ */
-    --bg0: 205 35% 97%;
-    --bg1: 170 35% 95%;
-    --card2: 0 0% 100%;
-    --text: 222 40% 10%;
-    --muted: 215 18% 46%;
-    --border: 215 24% 88%;
-
-    /* Accent palette */
-    --leaf: 146 46% 32%;
-    --moss: 150 32% 26%;
-    --river: 196 52% 34%;
-    --sun: 34 90% 56%;
-    --danger: 3 74% 54%;
-    --warning: 32 92% 50%;
-
-    /* Glow (low-alpha, premium) */
-    --glowLeaf: 146 70% 52%;
-    --glowRiver: 196 70% 52%;
-
-    /* ------------------------------------------------------------
-       Shadcn compatibility tokens (mapped)
-       ------------------------------------------------------------ */
-    --background: var(--bg0);
-    --foreground: var(--text);
+    --background: 90 14% 96%;
+    --foreground: 140 25% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: var(--text);
+    --card-foreground: 140 25% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: var(--text);
+    --popover-foreground: 140 25% 12%;
 
-    --primary: var(--leaf);
+    --primary: 146 52% 32%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 205 35% 92%;
-    --secondary-foreground: 222 40% 12%;
+    --secondary: 140 16% 91%;
+    --secondary-foreground: 140 25% 14%;
 
-    /* keep accent for CTAs but make it more sun-warm (still subtle) */
-    --accent: var(--sun);
+    --muted: 140 12% 90%;
+    --muted-foreground: 140 14% 38%;
+
+    --accent: 36 90% 48%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: var(--danger);
+    --destructive: 3 74% 54%;
     --destructive-foreground: 0 0% 100%;
 
-    --input: var(--border);
-    --ring: var(--river);
+    --border: 140 14% 86%;
+    --input: 140 14% 86%;
+    --ring: 146 52% 32%;
 
-    /* Rounded corners (16–24px) */
-    --radius: 1.25rem;
+    --radius: 1rem;
 
     /* Sidebar tokens */
-    --sidebar-background: var(--bg0);
-    --sidebar-foreground: 222 20% 24%;
-    --sidebar-primary: var(--leaf);
+    --sidebar-background: 90 14% 95%;
+    --sidebar-foreground: 140 25% 14%;
+    --sidebar-primary: 146 52% 32%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 205 35% 92%;
-    --sidebar-accent-foreground: 222 40% 12%;
-    --sidebar-border: var(--border);
-    --sidebar-ring: var(--river);
+    --sidebar-accent: 140 16% 90%;
+    --sidebar-accent-foreground: 140 25% 14%;
+    --sidebar-border: 140 14% 86%;
+    --sidebar-ring: 146 52% 32%;
+
+    /* Brand Accents */
+    --leaf: 146 52% 32%;
+    --moss: 150 32% 26%;
+    --river: 196 52% 34%;
+    --sun: 34 90% 50%;
+    --danger: 3 74% 54%;
+    --warning: 32 92% 50%;
+    --glowLeaf: 146 70% 45%;
+    --glowRiver: 196 70% 45%;
   }
 
   .dark {
     /* ------------------------------------------------------------
-       Dark: deep forest/ocean (default vibe)
+       Hedgerow Botanical Palette (Dark Forest Floor Mode - Default)
        ------------------------------------------------------------ */
-    --bg0: 210 35% 6%;
-    --bg1: 190 40% 7%;
-    --card: 210 30% 10%;
-    --card2: 210 24% 12%;
-    --text: 210 22% 95%;
-    --muted: 215 18% 70%;
-    --border: 210 22% 18%;
+    --background: 140 18% 7%;
+    --foreground: 90 15% 94%;
 
-    --leaf: 146 46% 44%;
+    --card: 140 14% 11%;
+    --card-foreground: 90 15% 94%;
+
+    --popover: 140 14% 11%;
+    --popover-foreground: 90 15% 94%;
+
+    --primary: 146 58% 46%;
+    --primary-foreground: 140 30% 6%;
+
+    --secondary: 140 12% 16%;
+    --secondary-foreground: 90 15% 92%;
+
+    --muted: 140 10% 18%;
+    --muted-foreground: 140 12% 65%;
+
+    --accent: 36 90% 55%;
+    --accent-foreground: 140 30% 6%;
+
+    --destructive: 3 74% 58%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 140 12% 18%;
+    --input: 140 12% 18%;
+    --ring: 146 58% 46%;
+
+    --radius: 1rem;
+
+    /* Sidebar tokens */
+    --sidebar-background: 140 16% 8%;
+    --sidebar-foreground: 90 15% 92%;
+    --sidebar-primary: 146 58% 46%;
+    --sidebar-primary-foreground: 140 30% 6%;
+    --sidebar-accent: 140 12% 14%;
+    --sidebar-accent-foreground: 90 15% 94%;
+    --sidebar-border: 140 12% 16%;
+    --sidebar-ring: 146 58% 46%;
+
+    /* Brand Accents */
+    --leaf: 146 58% 46%;
     --moss: 150 34% 34%;
     --river: 196 54% 48%;
     --sun: 34 92% 58%;
     --danger: 3 74% 58%;
     --warning: 32 94% 56%;
-
-    --glowLeaf: 146 70% 58%;
-    --glowRiver: 196 70% 60%;
-
-    --background: var(--bg0);
-    --foreground: var(--text);
-
-    --card-foreground: var(--text);
-
-    --popover: 210 30% 10%;
-    --popover-foreground: var(--text);
-
-    --primary: var(--leaf);
-    --primary-foreground: 210 35% 6%;
-
-    --secondary: 210 20% 14%;
-    --secondary-foreground: var(--text);
-
-    --accent: var(--sun);
-    --accent-foreground: 210 35% 6%;
-
-    --destructive: var(--danger);
-    --destructive-foreground: 210 35% 6%;
-
-    --input: var(--border);
-    --ring: var(--river);
-
-    --sidebar-background: var(--bg0);
-    --sidebar-foreground: var(--text);
-    --sidebar-primary: var(--leaf);
-    --sidebar-primary-foreground: 210 35% 6%;
-    --sidebar-accent: 210 20% 14%;
-    --sidebar-accent-foreground: var(--text);
-    --sidebar-border: var(--border);
-    --sidebar-ring: var(--river);
+    --glowLeaf: 146 70% 55%;
+    --glowRiver: 196 70% 55%;
   }
 }
 
@@ -134,7 +124,7 @@
   }
 
   html {
-    color-scheme: dark;
+    color-scheme: dark light;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: geometricPrecision;
@@ -149,53 +139,19 @@
     min-height: 100vh;
     font-size: 15px;
     line-height: 1.5;
-
-    /* Layered gradients (calm, bioluminescent) */
-    background:
-      radial-gradient(1200px 800px at 15% 15%, hsl(var(--river) / 0.22), transparent 60%),
-      radial-gradient(900px 700px at 85% 25%, hsl(var(--glowLeaf) / 0.16), transparent 55%),
-      radial-gradient(1200px 900px at 65% 90%, hsl(var(--sun) / 0.10), transparent 60%),
-      linear-gradient(180deg, hsl(var(--bg0)), hsl(var(--bg1)));
-
-    background-attachment: fixed;
+    background-color: hsl(var(--background));
     overflow-x: hidden;
   }
 
-  /* Subtle noise + slow drift (CSS-only) */
-  body::before {
-    content: "";
-    position: fixed;
-    inset: -20%;
-    z-index: -1;
-    pointer-events: none;
-
-    background:
-      radial-gradient(circle at 20% 10%, hsl(var(--glowRiver) / 0.10), transparent 35%),
-      radial-gradient(circle at 80% 30%, hsl(var(--glowLeaf) / 0.08), transparent 40%),
-      radial-gradient(circle at 60% 80%, hsl(var(--sun) / 0.06), transparent 40%),
-      repeating-radial-gradient(circle at 20% 30%, hsl(0 0% 100% / 0.015) 0 1px, transparent 1px 5px);
-
-    filter: blur(0px);
-    transform: translate3d(0, 0, 0);
-    animation: ab-drift 22s ease-in-out infinite alternate;
-    opacity: 0.9;
-  }
-
-  @keyframes ab-drift {
-    0% {
-      transform: translate3d(-1.5%, -1%, 0) scale(1.02);
-    }
-    100% {
-      transform: translate3d(1.5%, 1%, 0) scale(1.03);
-    }
-  }
-
   .ab-glow-leaf {
-    box-shadow: 0 0 0 1px hsl(var(--glowLeaf) / 0.12), 0 12px 30px hsl(var(--glowLeaf) / 0.08);
+    box-shadow: 0 0 0 1px hsl(var(--glowLeaf) / 0.15), 0 8px 24px hsl(var(--glowLeaf) / 0.10);
   }
 
   .ab-glow-river {
-    box-shadow: 0 0 0 1px hsl(var(--glowRiver) / 0.12), 0 12px 30px hsl(var(--glowRiver) / 0.08);
+    box-shadow: 0 0 0 1px hsl(var(--glowRiver) / 0.15), 0 8px 24px hsl(var(--glowRiver) / 0.10);
+  }
+
+  .ab-glow-sun {
+    box-shadow: 0 0 0 1px hsl(var(--sun) / 0.15), 0 8px 24px hsl(var(--sun) / 0.10);
   }
 }
-

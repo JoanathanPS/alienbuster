@@ -1,16 +1,20 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { GeoMap } from "@/components/GeoMap";
 import { Page } from "@/components/Page";
 import { useGeolocation } from "@/hooks/useGeolocation";
-import { Skeleton } from "@/components/ui/skeleton";
+import { MapPin } from "lucide-react";
 
 const Hotspots = () => {
   const geo = useGeolocation();
   const [center, setCenter] = useState<[number, number] | undefined>(undefined);
+  const requestedRef = useRef(false);
 
   useEffect(() => {
-    geo.requestLocation();
-  }, []);
+    if (!requestedRef.current) {
+      requestedRef.current = true;
+      geo.requestLocation();
+    }
+  }, [geo]);
 
   useEffect(() => {
     if (geo.latitude && geo.longitude) {
@@ -19,9 +23,16 @@ const Hotspots = () => {
   }, [geo.latitude, geo.longitude]);
 
   return (
-    <Page title="Hotspots" description="Interactive map of all invasive species reports and outbreaks.">
-      <div className="relative h-[calc(100vh-200px)] w-full rounded-xl overflow-hidden border border-white/10">
-         {/* We pass center if we have it, else GeoMap defaults to India */}
+    <Page
+      title={
+        <div className="flex items-center gap-2">
+          <MapPin className="h-5 w-5 text-primary" aria-hidden="true" />
+          Hotspots & Clusters
+        </div>
+      }
+      description="Interactive geospatial mapping of crowdsourced reports, active outbreaks, and regional bio-threat anomalies."
+    >
+      <div className="relative h-[calc(100vh-210px)] min-h-[450px] w-full rounded-2xl overflow-hidden border border-border bg-card/60 shadow-sm">
          <GeoMap 
             center={center} 
             zoom={center ? 11 : 5} 

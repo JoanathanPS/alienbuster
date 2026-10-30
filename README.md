@@ -39,63 +39,75 @@
 - **🗺️ Geospatial Threat Mapping:** Interactive heatmaps, marker clustering, and geographic incident tracking with Leaflet.
 - **⚡ Calm Signals, Rapid Response:** Triage priority levels, review crowdsourced sightings, and dispatch field response teams.
 
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/f9a20b82-a62d-423b-8c4b-58cb399d771b" alt="AlienBuster Operations Console UI" width="600" />
-</p>
+---
+
+## 🧠 AI Species Identification & Vision Model
+
+The system uses a flexible, multi-mode architecture for identifying invasive species from user-submitted photos:
+
+| Mode | Configuration | Description |
+| :--- | :--- | :--- |
+| **Heuristic Engine** *(Default)* | `VISION_MODEL_MODE=heuristic` | **Instant, zero-download, zero-dependency.** Evaluates image color spectra, vegetation index, and taxonomy matching. Runs out of the box with no GPU or gigabyte-sized model weights. |
+| **Hugging Face API** *(Cloud)* | `VISION_MODEL_MODE=huggingface`<br>`HUGGINGFACE_API_KEY=hf_...` | Uses HuggingFace Serverless Inference API for `imageomics/bioclip`. No local downloads or GPU required. |
+| **Gemini Vision API** *(Cloud)* | `VISION_MODEL_MODE=gemini`<br>`GEMINI_API_KEY=...` | Cloud multimodal identification with reasoning explanations. |
+| **Local PyTorch** *(Optional)* | `VISION_MODEL_MODE=local_torch` | Runs local PyTorch & `open_clip` weights (requires `torch` and GPU or local checkpoint). |
+
+> [!NOTE]
+> **No local model weights are required!** You do **not** need to download multi-gigabyte `.bin` model files. Out-of-the-box, the backend uses the zero-download heuristic engine or cloud inference endpoints.
 
 ---
 
-## 🛠️ Tech Stack & Architecture
+## 🛠️ Environment Variables Configuration
 
-- **Frontend:** React 18, Vite, TypeScript, Tailwind CSS, Radix UI / shadcn, Leaflet, Framer Motion
-- **Backend:** Python, FastAPI, Uvicorn, Pydantic, Pillow
-- **Data & Storage:** Supabase (PostgreSQL with RLS) with SQLite local fallback
-- **Ecosystem & ML:** BioCLIP image models, Earth Engine remote sensing integration
+All configuration is consolidated into a single template: [`.env.example`](file:///.env.example).
 
----
-
-## 🚀 Development & Deployment
-
-The project contains two pieces:
-
-1. **Frontend:** Located under `src/` and built with Vite/React. Run with `npm run dev`.
-2. **Backend:** Python/FastAPI service in `backend/`; run with Uvicorn.
-
-The backend defaults to **SQLite** (local file) but connects to Supabase when `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are configured.
-
-### Environment Variables
-
-Add the variables shown in `.env.example` to `.env` and/or `.env.local`. The public keys (URL, publishable key) are safe to commit; the service role key must remain secret.
-
-### Running Locally
-
+To configure your environment:
 ```bash
-# 1. Install dependencies
-cd backend && pip install -r requirements.txt && cd ..
+# Copy the template to .env
+cp .env.example .env
+```
+
+### Key Variables
+- **`VITE_API_BASE`**: URL of the Python FastAPI backend (`http://127.0.0.1:8000`).
+- **`VITE_SUPABASE_URL`** & **`VITE_SUPABASE_PUBLISHABLE_KEY`**: Supabase client connection (safe to expose to browser).
+- **`SUPABASE_SERVICE_ROLE_KEY`**: Secret Supabase key for backend (optional; backend defaults to local SQLite if omitted).
+- **`VISION_MODEL_MODE`**: Set to `heuristic` (default) or `huggingface`.
+
+---
+
+## 🚀 Running Locally
+
+### 1. Frontend Setup
+```bash
 npm install
-
-# 2. Start services (Option A: Combined launcher on Windows)
-run_app.bat
-
-# Option B: Start backend and frontend separately
-python -m uvicorn backend.main:app --reload --port 8000
 npm run dev
+# Vite runs at http://localhost:8080
 ```
 
-### Docker (Backend)
+### 2. Backend Setup
+```bash
+cd backend
+pip install -r requirements.txt
+python -m uvicorn backend.main:app --reload --port 8000
+```
 
-A `Dockerfile` is included for containerized deployment:
+### 3. One-Click Launcher (Windows)
+Run the bundled launcher script to start both services simultaneously:
+```cmd
+run_app.bat
+```
+
+---
+
+## 🧪 Testing with Playwright & Vitest
 
 ```bash
-docker build -t alienbuster-backend .
-docker run -e SUPABASE_URL=... -e SUPABASE_SERVICE_ROLE_KEY=... -e EARTH_ENGINE_PROJECT=... -p 8000:8000 alienbuster-backend
+# Run unit & component tests
+npm run test
+
+# Run End-to-End browser tests (Playwright)
+npx playwright test
 ```
-
-### Deployment
-
-- **Frontend:** Deployable to Vercel, Netlify, or any static/SPA hosting provider. Set `VITE_` variables in the dashboard.
-- **Backend:** Deployable to any Python cloud container host (Fly.io, Railway, AWS ECS, Heroku). Supply Supabase credentials securely.
-- **Database:** Run the SQL migrations (`supabase/migrations/`) on your Supabase Postgres database.
 
 ---
 

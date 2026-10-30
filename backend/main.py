@@ -30,10 +30,12 @@ from backend.inat_routes import router as inat_router
 
 from datetime import datetime
 
-# Load env
-_env_dir = Path(__file__).resolve().parent
-load_dotenv(_env_dir / ".env")
-load_dotenv(_env_dir / ".env.local")
+# Load env from root project directory (single .env file)
+_backend_dir = Path(__file__).resolve().parent
+_root_dir = _backend_dir.parent
+load_dotenv(_root_dir / ".env")
+load_dotenv(_root_dir / ".env.local")
+load_dotenv(_backend_dir / ".env")
 
 app = FastAPI(title="AlienBuster API", version="1.0.0")
 
