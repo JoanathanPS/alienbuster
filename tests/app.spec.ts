@@ -25,10 +25,16 @@ test.describe("AlienBuster Web App", () => {
     await page.goto("/");
 
     const faviconSvg = page.locator('link[rel="icon"][type="image/svg+xml"]');
-    await expect(faviconSvg).toHaveAttribute("href", "/favicon.svg");
+    await expect(faviconSvg).toHaveAttribute("href", /\/favicon\.svg/);
 
-    const response = await page.request.get("/favicon.svg");
-    expect(response.status()).toBe(200);
+    const faviconIco = page.locator('link[rel="icon"]:not([type])');
+    await expect(faviconIco).toHaveAttribute("href", /\/favicon\.ico/);
+
+    const responseSvg = await page.request.get("/favicon.svg");
+    expect(responseSvg.status()).toBe(200);
+
+    const responseIco = await page.request.get("/favicon.ico");
+    expect(responseIco.status()).toBe(200);
   });
 
   test("navigates across all key operational sections", async ({ page }) => {
