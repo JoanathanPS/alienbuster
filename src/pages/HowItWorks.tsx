@@ -29,17 +29,17 @@ const exampleSpecies = [
   {
     name: "Kudzu Vine (Pueraria montana)",
     desc: "Aggressive perennial vine native to East Asia. Smothers forest canopies, outcompeting native flora and destabilizing local biodiversity.",
-    image: "https://images.unsplash.com/photo-1592982537447-6f2a6a78b6d9?w=800",
+    image: "/images/species/kudzu.jpg",
   },
   {
     name: "Burmese Python (Python bivittatus)",
     desc: "Apex predator native to Southeast Asia, now severely impacting marsh rabbits, wading birds, and deer across wetland ecosystems.",
-    image: "https://images.unsplash.com/photo-1612682415667-6c5d8b8a7d6d?w=800",
+    image: "/images/species/burmese-python.jpg",
   },
   {
     name: "Red Lionfish (Pterois volitans)",
     desc: "Venomous Indo-Pacific predatory fish invading Atlantic and Caribbean reefs, depleting over 80% of juvenile native fish populations.",
-    image: "https://images.unsplash.com/photo-1560264280-88b68371db39?w=800",
+    image: "/images/species/red-lionfish.jpg",
   },
 ];
 

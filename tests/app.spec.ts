@@ -38,10 +38,22 @@ test.describe("AlienBuster Web App", () => {
   });
 
   test("navigates across all key operational sections", async ({ page }) => {
-    // 1. How it works
+    // 1. How it works & Priority Species Images
     await page.goto("/how-it-works");
     await expect(page).toHaveURL(/.*how-it-works/);
     await expect(page.getByText(/How AlienBuster Works/i)).toBeVisible();
+    await expect(page.getByText(/Priority Bio-Threat Species/i)).toBeVisible();
+    await expect(page.getByText(/Kudzu Vine/i)).toBeVisible();
+    await expect(page.getByText(/Burmese Python/i)).toBeVisible();
+    await expect(page.getByText(/Red Lionfish/i)).toBeVisible();
+
+    // Verify all 3 species images exist and return 200
+    for (const imgPath of ["/images/species/kudzu.jpg", "/images/species/burmese-python.jpg", "/images/species/red-lionfish.jpg"]) {
+      const img = page.locator(`img[src="${imgPath}"]`);
+      await expect(img).toBeVisible();
+      const res = await page.request.get(imgPath);
+      expect(res.status()).toBe(200);
+    }
 
     // 2. Hotspots
     await page.goto("/hotspots");
