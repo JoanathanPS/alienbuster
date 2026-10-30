@@ -51,5 +51,20 @@ test.describe("AlienBuster Web App", () => {
     await page.goto("/intel");
     await expect(page).toHaveURL(/.*intel/);
     await expect(page.getByText(/Satellite & Correlation/i)).toBeVisible();
+
+    // 5. Submit page & BioCLIP upload form
+    await page.goto("/submit");
+    await expect(page).toHaveURL(/.*submit/);
+    await expect(page.getByText(/Report Sighting/i)).toBeVisible();
+    await expect(page.getByText(/BioCLIP species identification/i)).toBeVisible();
+
+    // 6. Test specimen detection without requiring local Python server
+    const sampleBtn = page.getByRole("button", { name: /Use Sample Specimen/i });
+    await expect(sampleBtn).toBeVisible();
+    await sampleBtn.click();
+
+    // Verify detection results render
+    await expect(page.getByText(/Invasive Threat/i)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/neural confidence/i)).toBeVisible();
   });
 });
