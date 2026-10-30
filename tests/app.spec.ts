@@ -74,15 +74,40 @@ test.describe("AlienBuster Web App", () => {
     await page.goto("/submit");
     await expect(page).toHaveURL(/.*submit/);
     await expect(page.getByText(/Report Sighting/i)).toBeVisible();
-    await expect(page.getByText(/BioCLIP species identification/i)).toBeVisible();
 
-    // 6. Test specimen detection without requiring local Python server
-    const sampleBtn = page.getByRole("button", { name: /Use Sample Specimen/i });
-    await expect(sampleBtn).toBeVisible();
-    await sampleBtn.click();
+    // 6. Test specimen detection for INVASIVE SPECIES (Kudzu Vine)
+    const kudzuBtn = page.getByRole("button", { name: /Kudzu \(Invasive\)/i });
+    await expect(kudzuBtn).toBeVisible();
+    await kudzuBtn.click();
 
-    // Verify detection results render
+    // Verify invasive threat detection results
     await expect(page.getByText(/Invasive Threat/i)).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText(/neural confidence/i)).toBeVisible();
+    await expect(page.getByText('(Pueraria montana)', { exact: true })).toBeVisible();
+
+    // 7. Test specimen detection for NATIVE FLORA (Oak Tree)
+    const oakBtn = page.getByRole("button", { name: /Oak \(Native\)/i });
+    await expect(oakBtn).toBeVisible();
+    await oakBtn.click();
+
+    // Verify native non-invasive classification
+    await expect(page.getByText(/Native Flora \(Ecologically Benign\)/i)).toBeVisible({ timeout: 10000 });
+
+    // 8. Test specimen detection for MAN-MADE OBJECT (Car)
+    const carBtn = page.getByRole("button", { name: /Car \(Man-Made\)/i });
+    await expect(carBtn).toBeVisible();
+    await carBtn.click();
+
+    // Verify non-biological classification
+    await expect(page.getByText(/Non-Biological Object/i)).toBeVisible({ timeout: 10000 });
+
+    // 9. Response Center operational dashboard
+    await page.goto("/response");
+    await expect(page).toHaveURL(/.*response/);
+    await expect(page.getByText(/Response Center/i)).toBeVisible();
+
+    // 10. Expert Review triage console
+    await page.goto("/expert-review");
+    await expect(page).toHaveURL(/.*expert-review/);
+    await expect(page.getByText("Expert Review", { exact: true })).toBeVisible();
   });
 });

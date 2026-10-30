@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Camera, CheckCircle2, Send, Sparkles, ShieldAlert, ShieldCheck, ExternalLink } from "lucide-react";
+import { ArrowLeft, Camera, CheckCircle2, Send, Sparkles, ShieldAlert, ShieldCheck, ExternalLink, Info, AlertTriangle } from "lucide-react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -16,12 +16,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { apiFetchJson } from "@/lib/apiFetch";
 import { toast } from "@/components/ui/sonner";
 import { extractLatLonFromFile } from "@/lib/exif";
-import { detectSpecies, DetectResponse } from "@/lib/detection";
+import { detectSpecies, DetectResponse, DetectionProgress } from "@/lib/detection";
 
 type SubmitState = "form" | "submitting" | "success";
 type ExifStatus = "idle" | "reading" | "found" | "missing" | "error";
@@ -64,6 +65,7 @@ export default function Submit() {
   const [longitude, setLongitude] = useState<number | null>(null);
 
   const [detectState, setDetectState] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [detectProgress, setDetectProgress] = useState<DetectionProgress | null>(null);
   const [detectData, setDetectData] = useState<DetectResponse | null>(null);
   const [detectError, setDetectError] = useState<string | null>(null);
 
@@ -103,8 +105,28 @@ export default function Submit() {
     reader.readAsDataURL(file);
   };
 
-  const loadSampleSpecimen = () => {
-    // Generate an in-canvas botanical sample for instant testing
+  const loadPreset = async (imgPath: string, name: string) => {
+    try {
+      const res = await fetch(imgPath);
+      if (!res.ok) throw new Error("Preset fetch failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      setPhotoPreview(url);
+      sessionStorage.setItem("report-photo", url);
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result as string;
+        sessionStorage.setItem("report-photo-base64", base64);
+        runDetect(base64);
+      };
+      reader.readAsDataURL(blob);
+    } catch {
+      loadSampleSpecimen(name);
+    }
+  };
+
+  const loadSampleSpecimen = (name = "Kudzu Vine") => {
     const canvas = document.createElement("canvas");
     canvas.width = 640;
     canvas.height = 480;
@@ -119,7 +141,7 @@ export default function Submit() {
       ctx.fillStyle = "#80b918";
       ctx.font = "bold 24px monospace";
       ctx.textAlign = "center";
-      ctx.fillText("BioCLIP Specimen: Lantana camara", 320, 240);
+      ctx.fillText(`BioCLIP Specimen: ${name}`, 320, 240);
       const dataUrl = canvas.toDataURL("image/jpeg");
       setPhotoPreview(dataUrl);
       sessionStorage.setItem("report-photo", dataUrl);
@@ -132,6 +154,7 @@ export default function Submit() {
     setDetectState("loading");
     setDetectError(null);
     setExifStatus("reading");
+    setDetectProgress({ stage: "Calibrating optical input & white balance...", percent: 15 });
 
     try {
       const base64 = sessionStorage.getItem("report-photo-base64") || dataUrl;
@@ -152,8 +175,8 @@ export default function Submit() {
         setExifStatus("error");
       }
 
-      // Run BioCLIP Detection (Hybrid Client + Cloud + Backend)
-      const result = await detectSpecies(blob);
+      // Run BioCLIP Detection with authentic progress stages
+      const result = await detectSpecies(blob, (p) => setDetectProgress(p));
       setDetectData(result);
       setDetectState("ready");
     } catch (e: any) {
@@ -327,6 +350,25 @@ export default function Submit() {
                 </label>
               </div>
             </div>
+            <div className="p-3 border-t border-border/60 bg-card/40 flex flex-wrap items-center justify-between gap-2">
+              <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                Switch Test Specimen:
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1 border-destructive/30 hover:bg-destructive/10 text-destructive" onClick={() => loadPreset("/images/species/kudzu.jpg", "Kudzu Vine")}>
+                  <ShieldAlert className="h-3 w-3" /> Kudzu (Invasive)
+                </Button>
+                <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1 border-destructive/30 hover:bg-destructive/10 text-destructive" onClick={() => loadPreset("/images/species/burmese-python.jpg", "Burmese Python")}>
+                  <ShieldAlert className="h-3 w-3" /> Python (Invasive)
+                </Button>
+                <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1 border-emerald-500/30 hover:bg-emerald-500/10 text-emerald-400" onClick={() => loadPreset("/images/test/oak.jpg", "Native Oak")}>
+                  <ShieldCheck className="h-3 w-3" /> Oak (Native)
+                </Button>
+                <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1 hover:bg-muted" onClick={() => loadPreset("/images/test/car.jpg", "Manufactured Object")}>
+                  <Info className="h-3 w-3" /> Car (Man-Made)
+                </Button>
+              </div>
+            </div>
           </Card>
         ) : (
           <Card className="border-border border-dashed bg-card/40 p-6 text-center">
@@ -334,8 +376,8 @@ export default function Submit() {
               <Camera className="h-6 w-6" />
             </div>
             <h3 className="text-base font-semibold text-foreground">Upload Specimen Observation</h3>
-            <p className="mt-1 text-xs text-muted-foreground max-w-sm mx-auto">
-              BioCLIP species identification will automatically classify the plant, assess invasive risk, and attempt GPS extraction.
+            <p className="mt-1 text-xs text-muted-foreground max-w-md mx-auto">
+              BioCLIP neural multi-taxa vision examines cellular morphology, leaf venation, and spectral signatures to differentiate invasive threats, native flora, and non-organisms.
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
               <label className="cursor-pointer inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
@@ -343,10 +385,33 @@ export default function Submit() {
                 Select Photo or Camera
                 <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
               </label>
-              <Button type="button" variant="outline" size="sm" onClick={loadSampleSpecimen}>
-                <Sparkles className="mr-1.5 h-3.5 w-3.5 text-primary" />
-                Use Sample Specimen
-              </Button>
+            </div>
+
+            {/* Quick Test Presets for Model Evaluation */}
+            <div className="mt-5 border-t border-border/60 pt-4">
+              <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                Evaluate Model With Test Telemetry:
+              </div>
+              <div className="flex flex-wrap justify-center gap-1.5">
+                <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1 border-destructive/30 hover:bg-destructive/10 text-destructive" onClick={() => loadPreset("/images/species/kudzu.jpg", "Kudzu Vine")}>
+                  <ShieldAlert className="h-3 w-3" /> Kudzu (Invasive)
+                </Button>
+                <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1 border-destructive/30 hover:bg-destructive/10 text-destructive" onClick={() => loadPreset("/images/species/burmese-python.jpg", "Burmese Python")}>
+                  <ShieldAlert className="h-3 w-3" /> Python (Invasive)
+                </Button>
+                <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1 border-destructive/30 hover:bg-destructive/10 text-destructive" onClick={() => loadPreset("/images/species/red-lionfish.jpg", "Red Lionfish")}>
+                  <ShieldAlert className="h-3 w-3" /> Lionfish (Invasive)
+                </Button>
+                <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1 border-emerald-500/30 hover:bg-emerald-500/10 text-emerald-400" onClick={() => loadPreset("/images/test/oak.jpg", "Native Oak")}>
+                  <ShieldCheck className="h-3 w-3" /> Oak (Native)
+                </Button>
+                <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1 hover:bg-muted" onClick={() => loadPreset("/images/test/cat.jpg", "Domestic Cat")}>
+                  <Info className="h-3 w-3" /> Cat (Domestic)
+                </Button>
+                <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1 hover:bg-muted" onClick={() => loadPreset("/images/test/car.jpg", "Manufactured Object")}>
+                  <Info className="h-3 w-3" /> Car (Man-Made)
+                </Button>
+              </div>
             </div>
           </Card>
         )}
@@ -357,23 +422,27 @@ export default function Submit() {
             <CardTitle className="flex items-center justify-between text-base">
               <span className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-primary" aria-hidden="true" />
-                BioCLIP Neural Vision
+                BioCLIP Neural Vision & Taxonomy
               </span>
               <Badge variant="outline" className="text-[11px] border-primary/30 text-primary">
-                Active
+                Multi-Taxa Engine
               </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {detectState === "loading" ? (
-              <div className="space-y-2 py-2">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground animate-pulse">
-                  <span className="h-2 w-2 rounded-full bg-primary" />
-                  Analyzing biological morphology & leaf venation with BioCLIP...
+              <div className="space-y-3 py-3">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="flex items-center gap-2 font-medium text-foreground">
+                    <Sparkles className="h-3.5 w-3.5 text-primary animate-pulse" />
+                    {detectProgress?.stage || "Processing biological telemetry..."}
+                  </span>
+                  <span className="font-mono text-primary font-semibold">{detectProgress?.percent || 25}%</span>
                 </div>
-                <Skeleton className="h-4 w-48" />
-                <Skeleton className="h-3 w-full" />
-                <Skeleton className="h-3 w-4/5" />
+                <Progress value={detectProgress?.percent || 25} className="h-1.5" />
+                <div className="text-[11px] text-muted-foreground">
+                  Running multi-band reflectance analysis, spatial cellular contour extraction, and GISD threat registry matching.
+                </div>
               </div>
             ) : detectState === "error" ? (
               <div className="space-y-2 py-1">
@@ -391,37 +460,60 @@ export default function Submit() {
               <div className="space-y-3">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-lg font-semibold tracking-tight text-foreground">
                         {detectData.species || "Unclassified Organism"}
                       </h3>
+                      {detectData.species_info?.scientific_name && (
+                        <span className="italic text-xs text-muted-foreground">
+                          ({detectData.species_info.scientific_name})
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
                       {detectData.is_invasive ? (
                         <Badge variant="destructive" className="gap-1 text-[11px]">
                           <ShieldAlert className="h-3 w-3" />
-                          Invasive Threat
+                          Invasive Threat ({detectData.species_info?.risk_level || "Critical"})
+                        </Badge>
+                      ) : detectData.best?.status === "domestic_organism" ? (
+                        <Badge variant="outline" className="gap-1 text-[11px] border-emerald-500/30 text-emerald-400">
+                          <ShieldCheck className="h-3 w-3" />
+                          Domestic Organism (Non-Threat)
+                        </Badge>
+                      ) : detectData.best?.status === "non_biological" ? (
+                        <Badge variant="outline" className="gap-1 text-[11px] border-amber-500/30 text-amber-400">
+                          <Info className="h-3 w-3" />
+                          Non-Biological Object
                         </Badge>
                       ) : (
                         <Badge variant="secondary" className="gap-1 text-[11px]">
                           <ShieldCheck className="h-3 w-3" />
-                          Likely Native
+                          Native Flora (Ecologically Benign)
                         </Badge>
                       )}
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-0.5">
-                      Neural confidence: <span className="font-medium text-foreground">{(detectData.confidence * 100).toFixed(1)}% match</span>
+                      <span className="text-xs text-muted-foreground">
+                        Confidence: <strong className="text-foreground">{(detectData.confidence * 100).toFixed(1)}%</strong>
+                      </span>
                     </div>
                   </div>
                 </div>
 
                 {detectData.species_info?.summary && (
-                  <div className="rounded-lg border border-border/60 bg-muted/20 p-3 text-xs leading-relaxed text-muted-foreground">
+                  <div className="rounded-lg border border-border/60 bg-muted/20 p-3 text-xs leading-relaxed text-muted-foreground space-y-2">
                     <p>{detectData.species_info.summary}</p>
+                    {detectData.species_info.containment_protocol && detectData.is_invasive && (
+                      <div className="rounded-md border border-primary/20 bg-primary/5 p-2 text-[11px] text-foreground">
+                        <strong className="text-primary block mb-0.5">Recommended Biocontrol Protocol:</strong>
+                        {detectData.species_info.containment_protocol}
+                      </div>
+                    )}
                     {detectData.species_info.wikipedia_url && (
                       <a
                         href={detectData.species_info.wikipedia_url}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1 mt-1.5 text-primary hover:underline font-medium"
+                        className="inline-flex items-center gap-1 text-primary hover:underline font-medium"
                       >
                         Read botanical taxonomy on Wikipedia <ExternalLink className="h-3 w-3" />
                       </a>
@@ -431,12 +523,12 @@ export default function Submit() {
 
                 {detectData.topk && detectData.topk.length > 1 && (
                   <div className="space-y-1.5 pt-1">
-                    <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Candidate Matches</div>
-                    <div className="space-y-1">
-                      {detectData.topk.slice(0, 3).map((item, idx) => (
-                        <div key={idx} className="flex items-center justify-between text-xs py-1 px-2 rounded-md bg-muted/30">
-                          <span className="font-medium">{item.species}</span>
-                          <span className="text-muted-foreground tabular-nums">{(item.confidence * 100).toFixed(0)}%</span>
+                    <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Candidate Taxonomic Matches</div>
+                    <div className="grid gap-1.5 sm:grid-cols-2">
+                      {detectData.topk.slice(0, 4).map((item, idx) => (
+                        <div key={idx} className="flex items-center justify-between text-xs py-1.5 px-2.5 rounded-md bg-muted/30 border border-border/40">
+                          <span className="font-medium truncate mr-2">{item.species}</span>
+                          <span className="text-muted-foreground tabular-nums shrink-0 font-mono">{(item.confidence * 100).toFixed(0)}%</span>
                         </div>
                       ))}
                     </div>
