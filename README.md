@@ -1,39 +1,90 @@
-<img width="544" height="711" alt="image" src="https://github.com/user-attachments/assets/f9a20b82-a62d-423b-8c4b-58cb399d771b" />
+<div align="center">
 
+<img src="./alienbuster-header.png" alt="AlienBuster - AI-Powered Early Warning System for Invasive Species" width="100%" />
 
-## Development & Deployment
+# 🛰️ AlienBuster
+
+### AI-Powered Early Warning System & Nature-Forward Operations Console for Invasive Species Detection
+
+[![GitHub Repository](https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github)](https://github.com/JoanathanPS/alienbuster)
+[![Canva Presentation](https://img.shields.io/badge/Canva-Slide_Deck-00C4CC?style=for-the-badge&logo=canva&logoColor=white)](https://canva.link/0pmea91ua4h69jf)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-22c55e?style=for-the-badge&logo=vercel&logoColor=white)](https://alienbuster.joanathan.in)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+
+<br />
+
+**Crowdsourced ground truth + remote sensing $\rightarrow$ decision-ready incidents.**  
+*Detect ecological bio-threats 6–12 months earlier than traditional surveys.*
+
+---
+
+</div>
+
+## 📌 Project Links & Resources
+
+- 🎨 **Canva Presentation / Pitch Deck:** [canva.link/0pmea91ua4h69jf](https://canva.link/0pmea91ua4h69jf)
+- 💻 **GitHub Repository:** [github.com/JoanathanPS/alienbuster](https://github.com/JoanathanPS/alienbuster)
+- 🌐 **Live Web Application:** [alienbuster.joanathan.in](https://alienbuster.joanathan.in)
+
+---
+
+## 🌿 About AlienBuster
+
+**AlienBuster** is an eco-defense intelligence platform and nature-forward operations console designed to protect fragile biodiversity and native ecosystems. By fusing BioCLIP machine learning vision, satellite remote sensing change detection, and clustered crowdsourced field observations, AlienBuster turns raw ecological data into clear, explainable, and actionable threat incidents.
+
+### Key Capabilities
+
+- **🛰️ Early Warning Signals:** Spot invasive species clusters 6–12 months prior to conventional surveys.
+- **🔍 Multi-Modal Bio-Intelligence:** AI species identification powered by BioCLIP integrated with satellite telemetry.
+- **🗺️ Geospatial Threat Mapping:** Interactive heatmaps, marker clustering, and geographic incident tracking with Leaflet.
+- **⚡ Calm Signals, Rapid Response:** Triage priority levels, review crowdsourced sightings, and dispatch field response teams.
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/f9a20b82-a62d-423b-8c4b-58cb399d771b" alt="AlienBuster Operations Console UI" width="600" />
+</p>
+
+---
+
+## 🛠️ Tech Stack & Architecture
+
+- **Frontend:** React 18, Vite, TypeScript, Tailwind CSS, Radix UI / shadcn, Leaflet, Framer Motion
+- **Backend:** Python, FastAPI, Uvicorn, Pydantic, Pillow
+- **Data & Storage:** Supabase (PostgreSQL with RLS) with SQLite local fallback
+- **Ecosystem & ML:** BioCLIP image models, Earth Engine remote sensing integration
+
+---
+
+## 🚀 Development & Deployment
 
 The project contains two pieces:
 
-1. **Frontend:** located under `src/` and built with Vite/React.  Run with `npm run dev`.
+1. **Frontend:** Located under `src/` and built with Vite/React. Run with `npm run dev`.
 2. **Backend:** Python/FastAPI service in `backend/`; run with Uvicorn.
 
-The backend defaults to **SQLite** (local file) but will talk to Supabase if
-`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set in the environment.
+The backend defaults to **SQLite** (local file) but connects to Supabase when `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are configured.
 
 ### Environment Variables
 
-Add the variables shown in `.env.example` to `.env` and/or `.env.local`. The
-public keys (URL, publishable key) are safe to commit; the service role key
-must remain secret.
+Add the variables shown in `.env.example` to `.env` and/or `.env.local`. The public keys (URL, publishable key) are safe to commit; the service role key must remain secret.
 
 ### Running Locally
 
 ```bash
-# install deps
+# 1. Install dependencies
 cd backend && pip install -r requirements.txt && cd ..
 npm install
 
-# optional: run the combined launcher script
-run_app.bat  # (Windows)
-# or start backend and frontend separately:
+# 2. Start services (Option A: Combined launcher on Windows)
+run_app.bat
+
+# Option B: Start backend and frontend separately
 python -m uvicorn backend.main:app --reload --port 8000
 npm run dev
 ```
 
-### Docker (backend)
+### Docker (Backend)
 
-A simple `Dockerfile` is included. Build and run with:
+A `Dockerfile` is included for containerized deployment:
 
 ```bash
 docker build -t alienbuster-backend .
@@ -42,13 +93,12 @@ docker run -e SUPABASE_URL=... -e SUPABASE_SERVICE_ROLE_KEY=... -e EARTH_ENGINE_
 
 ### Deployment
 
-- Frontend can be deployed to Vercel, Netlify, etc.  Set the `VITE_` vars in
-the hosting environment.
-- Backend can be deployed to any Python host (Heroku, Fly.io, AWS ECS, etc.);
-  supply the Supabase credentials there and keep them secret.
-- The SQL migration file (`supabase/migrations/0001_init.sql`) can be applied
-  to the target Supabase project during CI or manually.
+- **Frontend:** Deployable to Vercel, Netlify, or any static/SPA hosting provider. Set `VITE_` variables in the dashboard.
+- **Backend:** Deployable to any Python cloud container host (Fly.io, Railway, AWS ECS, Heroku). Supply Supabase credentials securely.
+- **Database:** Run the SQL migrations (`supabase/migrations/`) on your Supabase Postgres database.
 
-Once the environment variables are in place the app is production‑ready – the
-backend will use the cloud Postgres database and the frontend will authenticate
-via Supabase.
+---
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
